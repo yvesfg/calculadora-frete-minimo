@@ -679,6 +679,32 @@ button, input, select { font-family: inherit; font-size: inherit; }
   .calc-right .footer-note { margin-top: 12px; }
 }
 
+/* ── Route alternatives selector ── */
+.route-alts {
+  border-top: 1px solid var(--border);
+  padding: 12px 18px 16px;
+}
+.route-alts-title {
+  font-size: 10px; font-weight: 700; color: var(--txt3);
+  text-transform: uppercase; letter-spacing: .08em;
+  margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+}
+.route-alts-list { display: flex; flex-direction: column; gap: 6px; }
+.alt-route {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 14px; background: var(--bg);
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+  cursor: pointer; text-align: left; color: var(--txt);
+  transition: border-color var(--ease), background var(--ease);
+}
+.alt-route:hover  { border-color: var(--primary); }
+.alt-route.active { border-color: var(--primary); background: var(--primary-dim); }
+.alt-route-left { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.alt-route-num  { font-size: 11px; font-weight: 700; color: var(--txt); }
+.alt-route-meta { font-size: 11px; color: var(--txt3); }
+.alt-route-val  { font-size: 14px; font-weight: 800; color: var(--ok); white-space: nowrap; }
+.alt-route.active .alt-route-val { color: var(--primary); }
+
 </style>
 </head>
 <body>
@@ -951,6 +977,13 @@ button, input, select { font-family: inherit; font-size: inherit; }
       </div>
     </div>
     <div class="result-note" id="rNote"></div>
+    <div class="route-alts" id="routeAlts" style="display:none">
+      <div class="route-alts-title">
+        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Rotas disponíveis — clique para usar
+      </div>
+      <div class="route-alts-list" id="routeAltsList"></div>
+    </div>
   </div>
 
   <div class="footer-note">
@@ -1348,7 +1381,9 @@ for (const [t,,,cargo,axles,ccd,cc] of RAW) IDX[`${t}|${cargo}|${axles}`] = {ccd
 // ═══════════════════════════════════════════════════════
 const S = { fc:true, hp:false, rv:false };
 const coords = { origin:null, dest:null };
-let calcDist = null;   // km calculated via OSRM
+let calcDist = null;        // km of currently selected route
+let calcRoutes = [];        // [{distance, duration}, ...] from OSRM
+let selectedRouteIdx = 0;   // which route the user picked
 let debounceTimer = {};
 let acFocused = { origin:-1, dest:-1 };
 let activeTableTab = 'A';
@@ -1417,7 +1452,7 @@ async function loadCities(uf) {
 async function onStateChange(field) {
   const uf  = document.getElementById(field + 'UF').value;
   const inp = document.getElementById(field);
-  inp.value = ''; coords[field] = null; calcDist = null;
+  inp.value = ''; coords[field] = null; calcDist = null; calcRoutes = [];
   document.getElementById('distBadge').classList.remove('show');
   closeAC(field);
   if (!uf) { inp.disabled = true; inp.placeholder = 'Selecione o estado'; return; }
@@ -1436,7 +1471,7 @@ const addrTimers = {};
 function onCityInput(field) {
   const uf = document.getElementById(field + 'UF').value;
   const q  = (document.getElementById(field).value || '').trim().toUpperCase();
-  coords[field] = null; calcDist = null;
+  coords[field] = null; calcDist = null; calcRoutes = [];
   document.getElementById('distBadge').classList.remove('show');
 
   if (!q) { closeAC(field); return; }
@@ -1565,20 +1600,29 @@ function selectAddr(field, lat, lon, label) {
 async function calcDistance() {
   const {origin, dest} = coords;
   if (!origin || !dest) return;
+  calcRoutes = []; selectedRouteIdx = 0; calcDist = null;
+  document.getElementById('routeAlts').style.display = 'none';
   const badge = document.getElementById('distBadge');
   badge.classList.remove('show');
-  badge.querySelector('span').textContent = 'Calculando rota...';
+  document.getElementById('distBadgeTxt').textContent = 'Calculando rotas...';
   badge.classList.add('show');
   try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${origin.lon},${origin.lat};${dest.lon},${dest.lat}?overview=false`;
+    const url = `https://router.project-osrm.org/route/v1/driving/${origin.lon},${origin.lat};${dest.lon},${dest.lat}?overview=false&alternatives=true`;
     const r = await fetch(url);
     const d = await r.json();
-    if (d.code === 'Ok' && d.routes && d.routes[0]) {
-      const km = Math.round(d.routes[0].distance / 1000);
-      calcDist = km;
-      document.getElementById('distBadgeTxt').textContent = `${km.toLocaleString('pt-BR')} km · rota rodoviária calculada`;
+    if (d.code === 'Ok' && d.routes && d.routes.length) {
+      calcRoutes = d.routes.slice(0, 3).map(rt => ({
+        distance: Math.round(rt.distance / 1000),
+        duration: Math.round(rt.duration / 60)
+      }));
+      calcDist = calcRoutes[0].distance;
+      const n = calcRoutes.length;
+      document.getElementById('distBadgeTxt').textContent =
+        n > 1
+          ? `${calcDist.toLocaleString('pt-BR')} km · ${n} rotas disponíveis — clique em Calcular`
+          : `${calcDist.toLocaleString('pt-BR')} km · rota rodoviária calculada`;
     } else {
-      document.getElementById('distBadgeTxt').textContent = 'Rota não encontrada — use distância manual';
+      document.getElementById('distBadgeTxt').textContent = 'Rota não encontrada — verifique os municípios';
       calcDist = null;
     }
   } catch(e) {
@@ -1644,8 +1688,8 @@ function calcular() {
   const retorno = S.rv ? ccd * dist : 0;
   const total = ida + retorno;
 
-  // Store for table highlight
-  lastCalcResult = { tCode, cargo, axles:usedAxles };
+  // Store for table highlight + route alt recalc
+  lastCalcResult = { tCode, cargo, axles:usedAxles, ccd, cc };
 
   // Update result card
   document.getElementById('rTotal').textContent = R(total);
@@ -1669,6 +1713,67 @@ function calcular() {
   if (window.innerWidth < 960) {
     document.getElementById('resultCard').scrollIntoView({ behavior:'smooth', block:'nearest' });
   }
+
+  // Show route alternatives if OSRM returned more than one
+  renderRouteAlts();
+}
+
+// ═══════════════════════════════════════════════════════
+// ROUTE ALTERNATIVES
+// ═══════════════════════════════════════════════════════
+function fmtDur(mins) {
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return h > 0 ? `${h}h${String(m).padStart(2,'0')}min` : `${m}min`;
+}
+
+function renderRouteAlts() {
+  const el   = document.getElementById('routeAlts');
+  const list = document.getElementById('routeAltsList');
+  if (!lastCalcResult || calcRoutes.length < 2) { el.style.display = 'none'; return; }
+
+  const { ccd, cc } = lastCalcResult;
+  list.innerHTML = calcRoutes.map((rt, i) => {
+    const ida   = ccd * rt.distance + cc;
+    const total = S.rv ? ida + ccd * rt.distance : ida;
+    return `<button class="alt-route${i === selectedRouteIdx ? ' active' : ''}"
+              onclick="selectRoute(${i})">
+      <div class="alt-route-left">
+        <span class="alt-route-num">Rota ${i + 1}</span>
+        <span class="alt-route-meta">${rt.distance.toLocaleString('pt-BR')} km · ${fmtDur(rt.duration)}</span>
+      </div>
+      <span class="alt-route-val">${R(total)}</span>
+    </button>`;
+  }).join('');
+  el.style.display = 'block';
+}
+
+function selectRoute(idx) {
+  selectedRouteIdx = idx;
+  const rt = calcRoutes[idx];
+  calcDist = rt.distance;
+
+  // Update dist badge
+  document.getElementById('distBadgeTxt').textContent =
+    `${rt.distance.toLocaleString('pt-BR')} km · Rota ${idx + 1} de ${calcRoutes.length} · ${fmtDur(rt.duration)}`;
+
+  // Recalculate freight for this distance
+  const { ccd, cc, tCode, cargo, axles } = lastCalcResult;
+  const ida    = ccd * rt.distance + cc;
+  const ret    = S.rv ? ccd * rt.distance : 0;
+  const total  = ida + ret;
+
+  document.getElementById('rTotal').textContent = R(total);
+  document.getElementById('rDist').textContent  = `${rt.distance.toLocaleString('pt-BR')} km`;
+  document.getElementById('rIda').textContent   = R(ida);
+  if (S.rv) document.getElementById('rRetorno').textContent = R(ret);
+  document.getElementById('rNote').innerHTML =
+    `Fórmula: <code>R$&nbsp;${ccd.toFixed(4)}&nbsp;×&nbsp;${rt.distance}&nbsp;km&nbsp;+&nbsp;R$&nbsp;${cc.toFixed(2)}${S.rv?`&nbsp;+&nbsp;R$&nbsp;${ccd.toFixed(4)}&nbsp;×&nbsp;${rt.distance}&nbsp;km`:''}`;
+
+  // Re-render alts cards to update active state
+  renderRouteAlts();
+
+  // Re-highlight table
+  if (activeTableTab === tCode) highlightTable(tCode, cargo, axles);
 }
 
 // ═══════════════════════════════════════════════════════
