@@ -632,6 +632,18 @@ button, input, select { font-family: inherit; font-size: inherit; }
 .td-total-lbl { text-align: right; color: var(--txt3); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
 
 
+/* ── Route UF + City combo ── */
+.route-uf-city { display: flex; gap: 8px; align-items: flex-start; }
+.uf-wrap { position: relative; flex: 0 0 70px; display: flex; align-items: center; }
+.inp-uf {
+  width: 100%; padding: 0 6px;
+  font-size: 12.5px; font-weight: 700; text-align: center;
+  cursor: pointer;
+}
+.inp-uf:disabled { opacity: .5; cursor: default; }
+.uf-loading { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
+.inp:disabled { opacity: .5; cursor: default; }
+
 </style>
 </head>
 <body>
@@ -687,7 +699,7 @@ button, input, select { font-family: inherit; font-size: inherit; }
       </div>
       <div>
         <div class="card-head-title">Dados da Rota</div>
-        <div class="card-head-sub">Origem e destino — distância calculada automaticamente</div>
+        <div class="card-head-sub" id="routeSubtitle">Selecione estado e cidade — distância calculada automaticamente</div>
       </div>
     </div>
     <div class="card-body">
@@ -699,13 +711,21 @@ button, input, select { font-family: inherit; font-size: inherit; }
         <div class="route-field">
           <div class="route-dot origin"></div>
           <div class="route-field-wrap">
-            <label class="field-label" for="origin">Origem</label>
-            <div class="inp-wrap">
-              <span class="inp-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
-              <input type="text" class="inp" id="origin" placeholder="Cidade, Estado ou CEP de origem" autocomplete="off" oninput="onAddrInput('origin')" onkeydown="onAddrKeydown(event,'origin')">
-              <span class="inp-spinner" id="spinOrigin">
-                <svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--txt3)" stroke-width="2"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
-              </span>
+            <label class="field-label">ORIGEM</label>
+            <div class="route-uf-city">
+              <div class="uf-wrap">
+                <select class="inp inp-uf" id="originUF" onchange="onStateChange('origin')">
+                  <option value="">UF</option>
+                </select>
+                <span class="uf-loading" id="ufLoadingSpinner" style="display:none"><svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--txt3)" stroke-width="2"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg></span>
+              </div>
+              <div class="inp-wrap" style="flex:1">
+                <span class="inp-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+                <input type="text" class="inp" id="origin" placeholder="Digite ou selecione a cidade"
+                  autocomplete="off" oninput="onCityInput('origin')" onkeydown="onAddrKeydown(event,'origin')"
+                  disabled>
+                <span class="inp-spinner" id="spinOrigin"><svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--txt3)" stroke-width="2"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg></span>
+              </div>
             </div>
             <div class="autocomplete" id="acOrigin"></div>
           </div>
@@ -715,13 +735,20 @@ button, input, select { font-family: inherit; font-size: inherit; }
         <div class="route-field">
           <div class="route-dot dest"></div>
           <div class="route-field-wrap">
-            <label class="field-label" for="dest">Destino</label>
-            <div class="inp-wrap">
-              <span class="inp-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
-              <input type="text" class="inp" id="dest" placeholder="Cidade, Estado ou CEP de destino" autocomplete="off" oninput="onAddrInput('dest')" onkeydown="onAddrKeydown(event,'dest')">
-              <span class="inp-spinner" id="spinDest">
-                <svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--txt3)" stroke-width="2"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
-              </span>
+            <label class="field-label">DESTINO</label>
+            <div class="route-uf-city">
+              <div class="uf-wrap">
+                <select class="inp inp-uf" id="destUF" onchange="onStateChange('dest')">
+                  <option value="">UF</option>
+                </select>
+              </div>
+              <div class="inp-wrap" style="flex:1">
+                <span class="inp-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+                <input type="text" class="inp" id="dest" placeholder="Digite ou selecione a cidade"
+                  autocomplete="off" oninput="onCityInput('dest')" onkeydown="onAddrKeydown(event,'dest')"
+                  disabled>
+                <span class="inp-spinner" id="spinDest"><svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--txt3)" stroke-width="2"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg></span>
+              </div>
             </div>
             <div class="autocomplete" id="acDest"></div>
           </div>
@@ -1300,54 +1327,136 @@ function switchPage(p) {
 }
 
 // ═══════════════════════════════════════════════════════
-// AUTOCOMPLETE — Nominatim
+// IBGE — Estados e Municípios (fonte oficial)
 // ═══════════════════════════════════════════════════════
-function onAddrInput(field) {
-  const val = document.getElementById(field).value.trim();
-  coords[field] = null;
-  calcDist = null;
-  document.getElementById('distBadge').classList.remove('show');
-  clearTimeout(debounceTimer[field]);
-  closeAC(field === 'origin' ? 'dest' : 'origin');
+const ibgeCities = {};
 
-  if (val.length < 3) { closeAC(field); return; }
-  debounceTimer[field] = setTimeout(() => searchAddr(field, val), 500);
+async function loadStates() {
+  const spin = document.getElementById('ufLoadingSpinner');
+  if (spin) spin.style.display = 'flex';
+  try {
+    const r = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome');
+    const states = await r.json();
+    const opts = '<option value="">UF</option>' +
+      states.map(s => `<option value="${s.sigla}">${s.sigla}</option>`).join('');
+    document.getElementById('originUF').innerHTML = opts;
+    document.getElementById('destUF').innerHTML   = opts;
+  } catch(e) {
+    document.getElementById('routeSubtitle').textContent = 'Erro ao carregar estados — verifique a conexão.';
+  }
+  if (spin) spin.style.display = 'none';
 }
 
-async function searchAddr(field, q) {
+async function loadCities(uf) {
+  if (ibgeCities[uf]) return ibgeCities[uf];
+  const r = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`);
+  const data = await r.json();
+  ibgeCities[uf] = data.map(c => c.nome.toUpperCase());
+  return ibgeCities[uf];
+}
+
+async function onStateChange(field) {
+  const uf  = document.getElementById(field + 'UF').value;
+  const inp = document.getElementById(field);
+  inp.value = ''; coords[field] = null; calcDist = null;
+  document.getElementById('distBadge').classList.remove('show');
+  closeAC(field);
+  if (!uf) { inp.disabled = true; inp.placeholder = 'Selecione o estado'; return; }
+  inp.disabled = true; inp.placeholder = 'Carregando municípios...';
+  try {
+    await loadCities(uf);
+    inp.disabled = false; inp.placeholder = 'Digite ou selecione o município'; inp.focus();
+  } catch(e) { inp.disabled = false; inp.placeholder = 'Erro ao carregar municípios'; }
+}
+
+// ═══════════════════════════════════════════════════════
+// AUTOCOMPLETE — IBGE local filter + Nominatim geocoding
+// ═══════════════════════════════════════════════════════
+const addrTimers = {};
+
+function onCityInput(field) {
+  const uf = document.getElementById(field + 'UF').value;
+  const q  = (document.getElementById(field).value || '').trim().toUpperCase();
+  coords[field] = null; calcDist = null;
+  document.getElementById('distBadge').classList.remove('show');
+
+  if (!q) { closeAC(field); return; }
+
+  if (uf && ibgeCities[uf]) {
+    // Filter from local IBGE cache — instant, no network call
+    const norm = q.normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const starts = ibgeCities[uf].filter(c =>
+      c.normalize('NFD').replace(/[̀-ͯ]/g,'').startsWith(norm));
+    const contains = ibgeCities[uf].filter(c =>
+      !c.normalize('NFD').replace(/[̀-ͯ]/g,'').startsWith(norm) &&
+       c.normalize('NFD').replace(/[̀-ͯ]/g,'').includes(norm));
+    showCityAC(field, [...starts, ...contains].slice(0, 10), uf);
+  } else {
+    // Fallback: Nominatim free-text (no state selected)
+    clearTimeout(addrTimers[field]);
+    addrTimers[field] = setTimeout(() => searchAddrFallback(field, q), 500);
+  }
+}
+
+function showCityAC(field, matches, uf) {
+  const acEl = document.getElementById(field === 'origin' ? 'acOrigin' : 'acDest');
+  acFocused[field] = -1;
+  if (!matches.length) { acEl.classList.remove('open'); return; }
+  acEl.innerHTML = matches.map((c, i) =>
+    `<div class="ac-item" id="ac-${field}-${i}"
+      onclick="selectCity('${field}','${c.replace(/'/g,"\\'")}','${uf}')"
+      onmouseenter="acFocused.${field}=${i};updateACFocus('${field}')">
+      <svg class="ac-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <div><div class="ac-main">${c}</div><div class="ac-sub">${uf} · Brasil · IBGE</div></div>
+    </div>`
+  ).join('');
+  acEl.classList.add('open');
+}
+
+async function selectCity(field, city, uf) {
+  document.getElementById(field).value = city;
+  closeAC(field);
+  const spinId = field === 'origin' ? 'spinOrigin' : 'spinDest';
+  document.getElementById(spinId).classList.add('show');
+  try {
+    const q = `${city}, ${uf}, Brasil`;
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&countrycodes=br&limit=1`,
+      { headers: {'Accept-Language':'pt-BR,pt'} }
+    );
+    const results = await r.json();
+    if (results.length) {
+      coords[field] = { lat: parseFloat(results[0].lat), lon: parseFloat(results[0].lon) };
+      if (coords.origin && coords.dest) calcDistance();
+    }
+  } catch(e) {}
+  document.getElementById(spinId).classList.remove('show');
+}
+
+async function searchAddrFallback(field, q) {
   const spin = document.getElementById(field === 'origin' ? 'spinOrigin' : 'spinDest');
   spin.classList.add('show');
   try {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&countrycodes=br&limit=5&addressdetails=1`;
     const r = await fetch(url, { headers: {'Accept-Language':'pt-BR,pt'} });
     const data = await r.json();
-    showAC(field, data);
-  } catch(e) {
-    closeAC(field);
-  } finally {
-    spin.classList.remove('show');
-  }
-}
-
-function showAC(field, results) {
-  const el = document.getElementById(field === 'origin' ? 'acOrigin' : 'acDest');
-  acFocused[field] = -1;
-  if (!results || results.length === 0) {
-    el.innerHTML = '<div class="ac-empty">Nenhum resultado encontrado</div>';
-    el.classList.add('open'); return;
-  }
-  el.innerHTML = results.map((r,i) => {
-    const addr = r.address || {};
-    const main = addr.city || addr.town || addr.village || addr.county || r.display_name.split(',')[0];
-    const sub  = [addr.state, addr.country].filter(Boolean).join(', ');
-    return `<div class="ac-item" id="ac-${field}-${i}"
-      onclick="selectAddr('${field}',${r.lat},${r.lon},${JSON.stringify(r.display_name.split(',').slice(0,2).join(',')).replace(/"/g,"'")})"
-      onmouseenter="acFocused.${field}=${i};updateACFocus('${field}')">
-      <svg class="ac-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      <div><div class="ac-main">${main}</div>${sub ? `<div class="ac-sub">${sub}</div>` : ''}</div>
-    </div>`;
-  }).join('');
-  el.classList.add('open');
+    const acEl = document.getElementById(field === 'origin' ? 'acOrigin' : 'acDest');
+    acFocused[field] = -1;
+    if (!data.length) { acEl.classList.remove('open'); return; }
+    acEl.innerHTML = data.map((res,i) => {
+      const addr = res.address || {};
+      const main = addr.city || addr.town || addr.village || addr.county || res.display_name.split(',')[0];
+      const sub  = [addr.state, 'Brasil'].filter(Boolean).join(', ');
+      return `<div class="ac-item" id="ac-${field}-${i}"
+        onclick="selectAddr('${field}',${res.lat},${res.lon},'${(main+', '+addr.state).replace(/'/g,"\\'")}'')"
+        onmouseenter="acFocused.${field}=${i};updateACFocus('${field}')">
+        <svg class="ac-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <div><div class="ac-main">${main}</div>${sub ? `<div class="ac-sub">${sub}</div>` : ''}</div>
+      </div>`;
+    }).join('');
+    acEl.classList.add('open');
+  } catch(e) { closeAC(field); }
+  spin.classList.remove('show');
 }
 
 function closeAC(field) {
@@ -1807,7 +1916,8 @@ function exportCSV() {
   document.getElementById('cfgData').textContent     = CONFIG.dataBase;
 })();
 
-// Build default table on load
+// Load IBGE states and build default table on load
+loadStates();
 buildTable('A');
 </script>
 </body>
