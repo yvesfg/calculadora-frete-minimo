@@ -492,20 +492,19 @@ button, input, select { font-family: inherit; font-size: inherit; }
 }
 .update-banner-close:hover { color: var(--txt); }
 
+
+
 /* ═══════════════════════════════════════════════════════
-   PLANILHA PAGE
+   PLANILHA — base components
 ═══════════════════════════════════════════════════════ */
-.sheet-wrap {
-  max-width: 1100px; margin: 0 auto;
-  padding: 28px 20px 60px;
-}
+.sheet-wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
 
 .sheet-toolbar {
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
 }
-.sheet-toolbar-left { display: flex; align-items: center; gap: 10px; }
-.sheet-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sheet-toolbar-left  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sheet-toolbar-right { display: flex; align-items: center; gap: 8px; }
 
 .btn-secondary {
   display: inline-flex; align-items: center; gap: 6px;
@@ -518,32 +517,23 @@ button, input, select { font-family: inherit; font-size: inherit; }
 .btn-secondary:hover { color: var(--txt); border-color: var(--primary); background: var(--surface-h); }
 
 .sheet-paste-zone {
-  position: relative;
-  border: 2px dashed var(--border);
-  border-radius: var(--r-xl);
-  padding: 36px 24px;
-  text-align: center;
-  cursor: pointer;
+  position: relative; border: 2px dashed var(--border); border-radius: var(--r-xl);
+  padding: 36px 24px; text-align: center; cursor: pointer;
   transition: border-color var(--ease), background var(--ease);
-  margin-bottom: 16px;
-  background: var(--surface);
+  margin-bottom: 16px; background: var(--surface);
 }
-.sheet-paste-zone:hover,
-.sheet-paste-zone.drag-over {
-  border-color: var(--primary);
-  background: var(--primary-dim);
+.sheet-paste-zone:hover, .sheet-paste-zone.drag-over {
+  border-color: var(--primary); background: var(--primary-dim);
 }
 .sheet-paste-zone kbd {
-  display: inline-block;
-  background: var(--surface-2); border: 1px solid var(--border);
+  display: inline-block; background: var(--surface-2); border: 1px solid var(--border);
   border-radius: 4px; padding: 1px 5px; font-size: 11px;
   font-family: monospace; color: var(--txt2);
 }
 
 .sheet-col-guide {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-xl); padding: 14px 16px;
-  margin-bottom: 20px;
+  border-radius: var(--r-xl); padding: 14px 16px; margin-bottom: 20px;
 }
 .sheet-col-pills { display: flex; flex-wrap: wrap; gap: 6px; }
 .col-pill {
@@ -551,13 +541,10 @@ button, input, select { font-family: inherit; font-size: inherit; }
   border-radius: var(--r-full); border: 1px solid var(--border);
   color: var(--txt2); white-space: nowrap;
 }
-.col-pill.col-b, .col-pill.col-c, .col-pill.col-d {
-  border-color: var(--primary-ring); color: var(--primary); background: var(--primary-dim);
-}
+.col-pill.col-b { border-color: var(--primary-ring); color: var(--primary); background: var(--primary-dim); }
 
 .sheet-results-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
 }
 .btn-icon-sm {
   display: inline-flex; align-items: center; gap: 5px;
@@ -568,59 +555,82 @@ button, input, select { font-family: inherit; font-size: inherit; }
 }
 .btn-icon-sm:hover { color: var(--err); border-color: var(--err); }
 
-.sheet-table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--r-xl);
-}
-.sheet-table {
-  width: 100%; border-collapse: collapse;
-  font-size: 12.5px;
-}
-.sheet-table thead th {
-  background: var(--surface); color: var(--txt3);
-  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
-  padding: 10px 12px; text-align: left; white-space: nowrap;
-  border-bottom: 1px solid var(--border);
-}
-.sheet-table tbody tr {
-  border-bottom: 1px solid var(--border-sub);
-  transition: background var(--ease-s);
-}
+.sheet-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--r-xl); }
+.sheet-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.sheet-table tbody tr { border-bottom: 1px solid var(--border-sub); transition: background var(--ease-s); }
 .sheet-table tbody tr:last-child { border-bottom: none; }
 .sheet-table tbody tr:hover { background: var(--surface-h); }
-.sheet-table tbody tr.row-err { background: var(--err-dim); }
-.sheet-table td {
-  padding: 9px 12px; color: var(--txt); vertical-align: middle;
-}
-.sheet-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
-.sheet-table td.frete { color: var(--ok); font-weight: 600; text-align: right; }
-.sheet-table td.cotacao { color: var(--primary); font-weight: 700; font-size: 13px; text-align: right; }
-.sheet-table td.dif { color: var(--warn); text-align: right; }
-.sheet-table td.err-msg { color: var(--err); font-size: 11px; }
-.sheet-table tfoot td {
-  padding: 10px 12px; font-weight: 700; font-size: 13px;
-  border-top: 1px solid var(--border); background: var(--surface);
-}
-.sheet-table tfoot .frete { color: var(--ok); text-align: right; }
-.sheet-table tfoot .cotacao { color: var(--primary); text-align: right; }
-.sheet-table tfoot .dif { color: var(--warn); text-align: right; }
-
-.margin-inp {
-  width: 60px; text-align: center;
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: var(--r-sm); color: var(--txt);
-  padding: 3px 6px; font-size: 12px; outline: none;
-  transition: border-color var(--ease);
-}
-.margin-inp:focus { border-color: var(--primary); }
+.sheet-table td { padding: 9px 12px; color: var(--txt); vertical-align: middle; }
 
 .sheet-errors-box {
   background: var(--err-dim); border: 1px solid var(--err-ring);
   border-radius: var(--r-xl); padding: 14px 16px;
-  font-size: 12px; color: var(--err); line-height: 1.8;
-  margin-top: 12px;
+  font-size: 12px; color: var(--err); line-height: 1.8; margin-top: 12px;
 }
+
+/* ═══════════════════════════════════════════════════════
+   PLANILHA — grouped headers + empresa column
+═══════════════════════════════════════════════════════ */
+.sheet-global-opts {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-xl); padding: 14px 18px; margin-bottom: 16px;
+  display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap;
+}
+.sheet-opt-group { display: flex; flex-direction: column; }
+.sheet-opt-sep { width: 1px; min-height: 60px; background: var(--border); align-self: center; }
+.sheet-opt-toggles { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* thead grouped rows */
+.sheet-table thead .thead-group th {
+  text-align: center; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .07em;
+  background: var(--surface-2); color: var(--txt2);
+  padding: 9px 10px; border-bottom: 1px solid var(--border);
+}
+.sheet-table thead .thead-sub th {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--txt3);
+  background: var(--surface); padding: 7px 12px;
+  border-bottom: 2px solid var(--border);
+}
+.th-group-orig { border-right: 1px solid var(--border-sub); }
+.th-group-dest { border-right: 1px solid var(--border-sub); }
+.th-num  { text-align: center !important; }
+.th-piso { text-align: right !important; color: var(--ok) !important; }
+.th-empresa {
+  text-align: center !important; color: var(--primary) !important;
+  min-width: 120px;
+}
+.empresa-margin-wrap {
+  display: flex; align-items: center; justify-content: center;
+  gap: 3px; margin-top: 5px;
+}
+.margin-head-inp {
+  width: 60px; text-align: center;
+  background: var(--primary-dim); border: 1px solid var(--primary-ring);
+  border-radius: var(--r-sm); color: var(--primary);
+  padding: 2px 5px; font-size: 13px; font-weight: 700; outline: none;
+  transition: border-color var(--ease);
+}
+.margin-head-inp:focus { border-color: var(--primary); }
+.margin-head-pct { font-size: 12px; color: var(--primary); font-weight: 600; }
+
+/* tbody cells */
+.td-uf { font-weight: 700; color: var(--txt3); font-size: 11.5px; white-space: nowrap; }
+.td-cidade { text-transform: uppercase; white-space: nowrap; }
+.td-num  { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.td-piso { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600; }
+.td-empresa {
+  text-align: right; font-variant-numeric: tabular-nums;
+  white-space: nowrap; font-weight: 700; color: var(--primary);
+}
+.td-empty { color: var(--txt3) !important; text-align: center !important; font-weight: 400 !important; }
+
+/* tfoot */
+.sheet-table tfoot tr { border-top: 2px solid var(--border); }
+.sheet-table tfoot td { padding: 10px 12px; background: var(--surface); }
+.td-total-lbl { text-align: right; color: var(--txt3); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+
 
 </style>
 </head>
@@ -913,29 +923,23 @@ button, input, select { font-family: inherit; font-size: inherit; }
 
   <div style="margin-bottom:20px">
     <div style="font-size:20px;font-weight:700;color:var(--txt);letter-spacing:-.02em;margin-bottom:4px">Planilha de Cotações</div>
-    <div style="font-size:13px;color:var(--txt2)">Calcule o frete mínimo e gere cotações para múltiplas rotas com margem de lucro.</div>
+    <div style="font-size:13px;color:var(--txt2)">Importe sua planilha, defina a operação e exporte com piso ANTT + margem da empresa.</div>
   </div>
 
-  <!-- CONTROLES GLOBAIS -->
+  <!-- TOOLBAR -->
   <div class="sheet-toolbar">
     <div class="sheet-toolbar-left">
-      <label class="field-label" style="margin:0">Margem global</label>
-      <div style="display:flex;align-items:center;gap:6px">
-        <input type="number" class="inp" id="sheetMargin" value="10" min="0" max="999" step="0.5"
-          style="width:80px;padding:0 10px;text-align:center" oninput="applyGlobalMargin()">
-        <span style="font-size:13px;color:var(--txt2)">%</span>
-      </div>
-    </div>
-    <div class="sheet-toolbar-right">
-      <label class="btn-secondary" for="sheetFileInput" title="Importar CSV ou Excel (CSV)">
+      <label class="btn-secondary" for="sheetFileInput">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        Importar CSV
-        <input type="file" id="sheetFileInput" accept=".csv,.txt" style="display:none" onchange="handleFileImport(event)">
+        Importar CSV / Excel
+        <input type="file" id="sheetFileInput" accept=".csv,.txt,.xls,.xlsx" style="display:none" onchange="handleFileImport(event)">
       </label>
       <button class="btn-secondary" onclick="downloadTemplate()">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Modelo CSV
       </button>
+    </div>
+    <div class="sheet-toolbar-right">
       <button class="btn-secondary" id="btnExport" onclick="exportCSV()" style="display:none">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Exportar CSV
@@ -943,37 +947,81 @@ button, input, select { font-family: inherit; font-size: inherit; }
     </div>
   </div>
 
-  <!-- ÁREA DE PASTE -->
+  <!-- PASTE ZONE -->
   <div class="sheet-paste-zone" id="sheetPasteZone">
-    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--txt3)" stroke-width="1.5"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><path d="M9 14l2 2 4-4"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--txt3)" stroke-width="1.5"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><path d="M9 14l2 2 4-4"/></svg>
     <div style="margin-top:10px;font-size:13px;font-weight:600;color:var(--txt2)">Cole os dados do Excel aqui</div>
-    <div style="font-size:12px;color:var(--txt3);margin-top:4px">Selecione as colunas no Excel e pressione <kbd>Ctrl+C</kbd>, depois clique aqui e pressione <kbd>Ctrl+V</kbd></div>
+    <div style="font-size:12px;color:var(--txt3);margin-top:4px">Selecione as colunas no Excel → <kbd>Ctrl+C</kbd>, clique aqui → <kbd>Ctrl+V</kbd></div>
     <textarea id="sheetPasteArea" style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none" tabindex="-1"></textarea>
   </div>
 
-  <!-- MAPA DE COLUNAS -->
+  <!-- COLUMN GUIDE -->
   <div class="sheet-col-guide">
     <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Formato esperado das colunas</div>
     <div class="sheet-col-pills">
-      <span class="col-pill col-a">A — Descrição/Rota</span>
-      <span class="col-pill col-b">B — Distância (km)*</span>
-      <span class="col-pill col-c">C — Tipo de Carga*</span>
-      <span class="col-pill col-d">D — Eixos*</span>
-      <span class="col-pill col-e">E — Comp. Completa (S/N)</span>
-      <span class="col-pill col-f">F — Alto Desempenho (S/N)</span>
-      <span class="col-pill col-g">G — Retorno Vazio (S/N)</span>
-      <span class="col-pill col-h">H — Margem % (sobrescreve global)</span>
+      <span class="col-pill">A — UF Origem</span>
+      <span class="col-pill">B — Cidade Origem</span>
+      <span class="col-pill">C — UF Destino</span>
+      <span class="col-pill">D — Cidade Destino</span>
+      <span class="col-pill col-b">E — Distância (km)*</span>
+      <span class="col-pill col-b">F — Eixos*</span>
+      <span class="col-pill">G — Tipo de Carga (opcional)</span>
     </div>
     <div style="font-size:11px;color:var(--txt3);margin-top:6px">
-      * Obrigatório. Tipo de carga: Granel Sólido, Granel Líquido, Frigorificada, Conteinerizada, Carga Geral, Neogranel, Granel Pressurizada, Perigosa Granel Sólido, Perigosa Granel Líquido, Perigosa Frigorificada, Perigosa Conteinerizada, Perigosa Carga Geral
+      * Obrigatório. Se a coluna G for omitida, usa o tipo de carga selecionado globalmente após importação.
     </div>
   </div>
 
-  <!-- TABELA DE RESULTADOS -->
+  <!-- GLOBAL OPTIONS — shown after upload -->
+  <div class="sheet-global-opts" id="sheetGlobalOpts" style="display:none">
+    <div class="sheet-opt-group">
+      <label class="field-label" style="margin:0 0 5px">Tipo de Carga</label>
+      <select id="sheetCargo" class="inp" style="height:34px;width:210px;padding:0 10px" onchange="renderSheet()">
+        <option value="granel_solido">Granel Sólido</option>
+        <option value="granel_liquido">Granel Líquido</option>
+        <option value="frigorificada">Frigorificada ou Aquecida</option>
+        <option value="conteinerizada">Conteinerizada</option>
+        <option value="carga_geral">Carga Geral</option>
+        <option value="neogranel">Neogranel</option>
+        <option value="granel_pressurizada">Granel Pressurizada</option>
+        <option value="perigosa_granel_solido">⚠ Perigosa (granel sólido)</option>
+        <option value="perigosa_granel_liquido">⚠ Perigosa (granel líquido)</option>
+        <option value="perigosa_frigorificada">⚠ Perigosa (frigorificada)</option>
+        <option value="perigosa_conteinerizada">⚠ Perigosa (conteiner.)</option>
+        <option value="perigosa_carga_geral">⚠ Perigosa (carga geral)</option>
+      </select>
+    </div>
+    <div class="sheet-opt-sep"></div>
+    <div class="sheet-opt-toggles">
+      <div class="toggle-card on" id="sheetTcFC" onclick="toggleSheetOp('FC')">
+        <div class="toggle-card-row">
+          <span class="toggle-card-label">Comp. Completa</span>
+          <div class="pill-switch"></div>
+        </div>
+        <div class="toggle-card-val" id="sheetValFC">Sim</div>
+      </div>
+      <div class="toggle-card" id="sheetTcHP" onclick="toggleSheetOp('HP')">
+        <div class="toggle-card-row">
+          <span class="toggle-card-label">Alto Desempenho</span>
+          <div class="pill-switch"></div>
+        </div>
+        <div class="toggle-card-val" id="sheetValHP">Não</div>
+      </div>
+      <div class="toggle-card" id="sheetTcRV" onclick="toggleSheetOp('RV')">
+        <div class="toggle-card-row">
+          <span class="toggle-card-label">Retorno Vazio</span>
+          <div class="pill-switch"></div>
+        </div>
+        <div class="toggle-card-val" id="sheetValRV">Não</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
   <div id="sheetResults" style="display:none">
     <div class="sheet-results-header">
       <span id="sheetResultCount" style="font-size:13px;font-weight:600;color:var(--txt)"></span>
-      <button class="btn-icon-sm" onclick="clearSheet()" title="Limpar tabela">
+      <button class="btn-icon-sm" onclick="clearSheet()">
         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         Limpar
       </button>
@@ -981,17 +1029,24 @@ button, input, select { font-family: inherit; font-size: inherit; }
     <div class="sheet-table-wrap">
       <table class="sheet-table" id="sheetTable">
         <thead>
-          <tr>
-            <th>#</th>
-            <th>Descrição / Rota</th>
-            <th>Dist.</th>
-            <th>Tipo de Carga</th>
-            <th>Eixos</th>
-            <th>Tab.</th>
-            <th>Frete Mínimo</th>
-            <th>Margem %</th>
-            <th>Cotação</th>
-            <th>Dif.</th>
+          <tr class="thead-group">
+            <th colspan="2" class="th-group th-group-orig">ORIGEM</th>
+            <th colspan="2" class="th-group th-group-dest">DESTINO</th>
+            <th rowspan="2" class="th-num">DISTÂNCIA<br>(KM)</th>
+            <th rowspan="2" class="th-num">EIXOS</th>
+            <th rowspan="2" class="th-piso">PISO</th>
+            <th rowspan="2" class="th-empresa">
+              EMPRESA
+              <div class="empresa-margin-wrap">
+                <input type="number" id="sheetMargin" value="10" min="0" max="999" step="0.5"
+                  class="margin-head-inp" oninput="applyGlobalMargin()" title="Margem em %">
+                <span class="margin-head-pct">%</span>
+              </div>
+            </th>
+          </tr>
+          <tr class="thead-sub">
+            <th>UF</th><th>CIDADE</th>
+            <th>UF</th><th>CIDADE</th>
           </tr>
         </thead>
         <tbody id="sheetTbody"></tbody>
@@ -1000,11 +1055,11 @@ button, input, select { font-family: inherit; font-size: inherit; }
     </div>
   </div>
 
-  <!-- ERROS DE PARSE -->
   <div id="sheetErrors" style="display:none" class="sheet-errors-box"></div>
 
 </div>
 </div><!-- /pageSheet -->
+
 
 <script>
 // ╔══════════════════════════════════════════════════════════════════╗
@@ -1507,22 +1562,37 @@ document.addEventListener('click', e => {
 
 
 // ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 // PLANILHA DE COTAÇÕES
 // ═══════════════════════════════════════════════════════
 
-// Normalize cargo type name to internal key
+// Global sheet operation state
+const sheetOpts = { fc: true, hp: false, rv: false };
+
+function toggleSheetOp(w) {
+  if (w==='FC') { sheetOpts.fc=!sheetOpts.fc; setSheetToggle('sheetTcFC','sheetValFC',sheetOpts.fc,sheetOpts.fc?'Sim':'Não'); }
+  if (w==='HP') { sheetOpts.hp=!sheetOpts.hp; setSheetToggle('sheetTcHP','sheetValHP',sheetOpts.hp,sheetOpts.hp?'Sim':'Não'); }
+  if (w==='RV') { sheetOpts.rv=!sheetOpts.rv; setSheetToggle('sheetTcRV','sheetValRV',sheetOpts.rv,sheetOpts.rv?'Sim':'Não'); }
+  renderSheet();
+}
+function setSheetToggle(cardId, valId, on, label) {
+  document.getElementById(cardId).classList.toggle('on', on);
+  document.getElementById(valId).textContent = label;
+}
+
+// Normalize cargo type
 const CARGO_NORMALIZE = {
-  'granel solido':'granel_solido','granel sólido':'granel_solido','granelsolido':'granel_solido',
-  'granel liquido':'granel_liquido','granel líquido':'granel_liquido','granelliquido':'granel_liquido',
+  'granel solido':'granel_solido','granel sólido':'granel_solido',
+  'granel liquido':'granel_liquido','granel líquido':'granel_liquido',
   'frigorificada':'frigorificada','frigorificada/aquecida':'frigorificada','aquecida':'frigorificada',
   'conteinerizada':'conteinerizada','conteiner':'conteinerizada','container':'conteinerizada',
-  'carga geral':'carga_geral','cargageral':'carga_geral',
+  'carga geral':'carga_geral',
   'neogranel':'neogranel',
-  'granel pressurizada':'granel_pressurizada','pressurizada':'granel_pressurizada','granelpressurizada':'granel_pressurizada',
+  'granel pressurizada':'granel_pressurizada','pressurizada':'granel_pressurizada',
   'perigosa granel solido':'perigosa_granel_solido','perigosa granel sólido':'perigosa_granel_solido',
   'perigosa granel liquido':'perigosa_granel_liquido','perigosa granel líquido':'perigosa_granel_liquido',
   'perigosa frigorificada':'perigosa_frigorificada',
-  'perigosa conteinerizada':'perigosa_conteinerizada','perigosa conteiner':'perigosa_conteinerizada',
+  'perigosa conteinerizada':'perigosa_conteinerizada',
   'perigosa carga geral':'perigosa_carga_geral',
 };
 function normalizeCargo(s) {
@@ -1535,250 +1605,198 @@ function normalizeCargo(s) {
   }
   return null;
 }
-function parseBool(v) {
-  if (v===undefined||v===null||v==='') return false;
-  const s = String(v).trim().toLowerCase();
-  return s==='s'||s==='sim'||s==='1'||s==='true'||s==='yes'||s==='x';
-}
 
 let sheetRows = [];
 
+// Parse spreadsheet: UF_orig | Cidade_orig | UF_dest | Cidade_dest | Distância | Eixos | [TipoCarga]
 function parseSheetData(raw) {
   const lines = raw.trim().split(/\r?\n/).filter(l=>l.trim());
   if (!lines.length) return;
 
-  const firstLine = lines[0];
-  const sep = firstLine.includes('\t') ? '\t' : firstLine.includes(';') ? ';' : ',';
+  const sep = lines[0].includes('\t') ? '\t' : lines[0].includes(';') ? ';' : ',';
+  const rows = [], errors = [];
 
-  const rows = [];
-  const errors = [];
-
-  // Skip header if col B of first row is non-numeric
-  let startIdx = 0;
+  // Skip header if column E (index 4) is not numeric
   const firstCols = lines[0].split(sep);
-  if (isNaN(parseFloat(String(firstCols[1]||'').replace(',','.')))) startIdx = 1;
+  const startIdx = isNaN(parseFloat(String(firstCols[4]||'').replace(',','.'))) ? 1 : 0;
 
   for (let i = startIdx; i < lines.length; i++) {
-    const cols = lines[i].split(sep).map(c => c.trim().replace(/^["']|["']$/g,''));
-    const lineNum = i + 1;
+    const c = lines[i].split(sep).map(v => v.trim().replace(/^["']|["']$/g,''));
+    const ln = i + 1;
 
-    const desc    = cols[0] || '';
-    const distRaw = cols[1];
-    const cargoRaw= cols[2];
-    const axlesRaw= cols[3];
+    const ufOrig  = (c[0]||'').toUpperCase().trim();
+    const cidOrig = (c[1]||'').toUpperCase().trim();
+    const ufDest  = (c[2]||'').toUpperCase().trim();
+    const cidDest = (c[3]||'').toUpperCase().trim();
+    const dist    = parseFloat(String(c[4]||'').replace(',','.'));
+    const axles   = parseInt(c[5]);
+    const cargoOverride = c[6] ? normalizeCargo(c[6]) : null;
 
-    const dist  = parseFloat(String(distRaw||'').replace(',','.'));
-    const axles = parseInt(axlesRaw);
-    const cargo = normalizeCargo(cargoRaw);
+    if (isNaN(dist) || dist < 0) { errors.push('Linha '+ln+': distância inválida ("'+c[4]+'")'); continue; }
+    if (!axles || axles < 2 || axles > 9) { errors.push('Linha '+ln+': eixos inválidos ("'+c[5]+'")'); continue; }
 
-    if (isNaN(dist) || dist <= 0) { errors.push('Linha ' + lineNum + ': distância inválida ("' + distRaw + '")'); continue; }
-    if (!cargo) { errors.push('Linha ' + lineNum + ': tipo de carga não reconhecido ("' + cargoRaw + '")'); continue; }
-    if (!axles || axles < 2 || axles > 9) { errors.push('Linha ' + lineNum + ': eixos inválidos ("' + axlesRaw + '")'); continue; }
-
-    const fc = cols[4] !== undefined && cols[4] !== '' ? parseBool(cols[4]) : true;
-    const hp = cols[5] !== undefined && cols[5] !== '' ? parseBool(cols[5]) : false;
-    const rv = cols[6] !== undefined && cols[6] !== '' ? parseBool(cols[6]) : false;
-    const marginOverride = cols[7] ? parseFloat(String(cols[7]).replace(',','.').replace('%','')) : null;
-
-    rows.push({ desc, dist, cargo, axles, fc, hp, rv, marginOverride, lineNum });
+    rows.push({ ufOrig, cidOrig, ufDest, cidDest, dist, axles, cargoOverride });
   }
 
   sheetRows = rows;
+  if (rows.length) document.getElementById('sheetGlobalOpts').style.display = '';
   renderSheet(errors);
 }
 
 function calcSheetRow(row) {
-  const tCode = row.hp && row.fc ? 'C' : row.hp ? 'D' : row.fc ? 'A' : 'B';
-  const found = findRow(tCode, row.cargo, row.axles);
+  const cargo = row.cargoOverride || document.getElementById('sheetCargo').value;
+  const { fc, hp, rv } = sheetOpts;
+  const tCode = hp && fc ? 'C' : hp ? 'D' : fc ? 'A' : 'B';
+  const found = findRow(tCode, cargo, row.axles);
   if (!found) return null;
   const { ccd, cc, axles: usedAxles, fallback } = found;
   const ida = ccd * row.dist + cc;
-  const retorno = row.rv ? ccd * row.dist : 0;
-  const total = ida + retorno;
-  return { tCode, ccd, cc, usedAxles, fallback, ida, retorno, total };
+  const retorno = rv ? ccd * row.dist : 0;
+  return { tCode, ccd, cc, usedAxles, fallback, total: ida + retorno };
+}
+
+function fmtN(v) {
+  return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function renderSheet(errors) {
   if (!errors) errors = [];
-  const globalMargin = parseFloat(document.getElementById('sheetMargin').value) || 0;
-  const tbody = document.getElementById('sheetTbody');
-  const tfoot = document.getElementById('sheetTfoot');
-  const errBox = document.getElementById('sheetErrors');
+  const margin    = parseFloat(document.getElementById('sheetMargin').value) || 0;
+  const errBox    = document.getElementById('sheetErrors');
   const resultDiv = document.getElementById('sheetResults');
 
-  if (errors.length) {
-    errBox.style.display = '';
-    errBox.innerHTML = '<b>Avisos de importação:</b><br>' + errors.map(function(e){ return '⚠ ' + e; }).join('<br>');
-  } else {
-    errBox.style.display = 'none';
-  }
+  errBox.style.display = errors.length ? '' : 'none';
+  if (errors.length) errBox.innerHTML = '<b>Avisos:</b><br>' + errors.map(e=>'⚠ '+e).join('<br>');
 
   if (!sheetRows.length) { resultDiv.style.display='none'; return; }
   resultDiv.style.display = '';
   document.getElementById('btnExport').style.display = '';
-  document.getElementById('sheetResultCount').textContent = sheetRows.length + ' linha' + (sheetRows.length>1?'s':'') + ' importada' + (sheetRows.length>1?'s':'');
+  document.getElementById('sheetResultCount').textContent =
+    sheetRows.length + ' linha' + (sheetRows.length>1?'s':'') + ' importada' + (sheetRows.length>1?'s':'');
 
-  let totalFrete = 0, totalCotacao = 0, totalDif = 0;
+  let totalPiso = 0, totalEmpresa = 0;
   let html = '';
 
   sheetRows.forEach(function(row, idx) {
     const calc = calcSheetRow(row);
-    const margin = (row.marginOverride !== null && !isNaN(row.marginOverride)) ? row.marginOverride : globalMargin;
+    const pisoTxt  = calc ? fmtN(calc.total)                   : '—';
+    const empTxt   = calc ? fmtN(calc.total * (1 + margin/100)): '—';
+    const pisoClass= calc ? 'td-piso'  : 'td-piso td-empty';
+    const empClass = calc ? 'td-empresa' : 'td-empresa td-empty';
 
-    if (!calc) {
-      html += '<tr class="row-err"><td>' + (idx+1) + '</td><td>' + (row.desc||'—') + '</td>' +
-        '<td colspan="8" class="err-msg">Sem dados para: ' + (CARGO_LBL[row.cargo]||row.cargo) + ', ' + row.axles + ' eixos</td></tr>';
-      return;
-    }
-
-    const cotacao = calc.total * (1 + margin / 100);
-    const dif = cotacao - calc.total;
-    totalFrete   += calc.total;
-    totalCotacao += cotacao;
-    totalDif     += dif;
-
-    const fb = calc.fallback ? ' <span style="color:var(--warn);font-size:10px" title="Eixo ajustado para ' + calc.usedAxles + '">▲' + calc.usedAxles + 'e</span>' : '';
-    const rvBadge = row.rv ? ' <span style="font-size:10px;color:var(--txt3)">[↩]</span>' : '';
+    if (calc) { totalPiso += calc.total; totalEmpresa += calc.total * (1 + margin/100); }
 
     html += '<tr>' +
-      '<td>' + (idx+1) + '</td>' +
-      '<td>' + (row.desc||'—') + rvBadge + '</td>' +
-      '<td class="num">' + row.dist.toLocaleString('pt-BR') + ' km</td>' +
-      '<td>' + (CARGO_LBL[row.cargo]||row.cargo) + '</td>' +
-      '<td class="num">' + row.axles + 'e' + fb + '</td>' +
-      '<td class="num">' + calc.tCode + '</td>' +
-      '<td class="frete">' + R(calc.total) + '</td>' +
-      '<td class="num"><input type="number" class="margin-inp" value="' + margin + '" min="0" max="999" step="0.5" data-idx="' + idx + '" oninput="updateRowMargin(this)">%</td>' +
-      '<td class="cotacao" id="cot-' + idx + '">' + R(cotacao) + '</td>' +
-      '<td class="dif" id="dif-' + idx + '">+' + R(dif) + '</td>' +
+      '<td class="td-uf">'    + row.ufOrig  + '</td>' +
+      '<td class="td-cidade">' + row.cidOrig + '</td>' +
+      '<td class="td-uf">'    + row.ufDest  + '</td>' +
+      '<td class="td-cidade">' + row.cidDest + '</td>' +
+      '<td class="td-num">'   + (row.dist > 0 ? row.dist.toLocaleString('pt-BR') : '0') + '</td>' +
+      '<td class="td-num">'   + row.axles   + '</td>' +
+      '<td class="' + pisoClass  + '" id="piso-' + idx + '">' + pisoTxt  + '</td>' +
+      '<td class="' + empClass   + '" id="emp-'  + idx + '">' + empTxt   + '</td>' +
       '</tr>';
   });
 
-  tbody.innerHTML = html;
-  tfoot.innerHTML = '<tr>' +
-    '<td colspan="6" style="text-align:right;color:var(--txt2);font-size:12px">TOTAIS</td>' +
-    '<td class="frete">' + R(totalFrete) + '</td>' +
-    '<td></td>' +
-    '<td class="cotacao">' + R(totalCotacao) + '</td>' +
-    '<td class="dif">+' + R(totalDif) + '</td>' +
+  document.getElementById('sheetTbody').innerHTML = html;
+  document.getElementById('sheetTfoot').innerHTML =
+    '<tr>' +
+    '<td colspan="6" class="td-total-lbl">TOTAIS</td>' +
+    '<td class="td-piso"   id="sheetTotalPiso">'   + fmtN(totalPiso)    + '</td>' +
+    '<td class="td-empresa" id="sheetTotalEmp">'   + fmtN(totalEmpresa) + '</td>' +
     '</tr>';
-}
-
-function recalcTotals() {
-  let tf=0, tc=0, td=0;
-  sheetRows.forEach(function(r,i) {
-    const c=calcSheetRow(r); if(!c) return;
-    const inp=document.querySelector('.margin-inp[data-idx="'+i+'"]');
-    const m=inp ? parseFloat(inp.value)||0 : parseFloat(document.getElementById('sheetMargin').value)||0;
-    tf+=c.total; tc+=c.total*(1+m/100); td+=c.total*m/100;
-  });
-  const tft=document.getElementById('sheetTfoot');
-  if(tft) tft.innerHTML='<tr><td colspan="6" style="text-align:right;color:var(--txt2);font-size:12px">TOTAIS</td>' +
-    '<td class="frete">'+R(tf)+'</td><td></td><td class="cotacao">'+R(tc)+'</td><td class="dif">+'+R(td)+'</td></tr>';
-}
-
-function updateRowMargin(inp) {
-  const idx  = parseInt(inp.dataset.idx);
-  const margin = parseFloat(inp.value) || 0;
-  const row  = sheetRows[idx];
-  const calc = calcSheetRow(row);
-  if (!calc) return;
-  const cotacao = calc.total * (1 + margin / 100);
-  const dif = cotacao - calc.total;
-  document.getElementById('cot-' + idx).textContent = R(cotacao);
-  document.getElementById('dif-' + idx).textContent = '+' + R(dif);
-  recalcTotals();
 }
 
 function applyGlobalMargin() {
   const margin = parseFloat(document.getElementById('sheetMargin').value) || 0;
-  document.querySelectorAll('.margin-inp').forEach(function(inp) {
-    inp.value = margin;
-    updateRowMargin(inp);
+  let totalPiso = 0, totalEmpresa = 0;
+  sheetRows.forEach(function(row, idx) {
+    const calc = calcSheetRow(row);
+    if (!calc) return;
+    const empresa = calc.total * (1 + margin/100);
+    totalPiso += calc.total; totalEmpresa += empresa;
+    const el = document.getElementById('emp-' + idx);
+    if (el) el.textContent = fmtN(empresa);
   });
+  const tp = document.getElementById('sheetTotalPiso');
+  const te = document.getElementById('sheetTotalEmp');
+  if (tp) tp.textContent = fmtN(totalPiso);
+  if (te) te.textContent = fmtN(totalEmpresa);
 }
 
 function clearSheet() {
   sheetRows = [];
   document.getElementById('sheetTbody').innerHTML = '';
   document.getElementById('sheetTfoot').innerHTML = '';
-  document.getElementById('sheetResults').style.display = 'none';
-  document.getElementById('sheetErrors').style.display = 'none';
-  document.getElementById('btnExport').style.display = 'none';
+  document.getElementById('sheetResults').style.display    = 'none';
+  document.getElementById('sheetErrors').style.display     = 'none';
+  document.getElementById('sheetGlobalOpts').style.display = 'none';
+  document.getElementById('btnExport').style.display       = 'none';
 }
 
 function downloadTemplate() {
-  const header = 'Descricao/Rota;Distancia km;Tipo de Carga;Eixos;Comp. Completa (S/N);Alto Desempenho (S/N);Retorno Vazio (S/N);Margem %';
-  const ex = [
-    'Sao Paulo para Curitiba;403;Granel Solido;5;S;N;N;10',
-    'Campinas para Belo Horizonte;560;Carga Geral;6;S;N;N;12',
-    'Rio para Salvador;1690;Frigorificada;7;S;N;S;15',
-    'Curitiba para Porto Alegre;547;Granel Liquido;5;N;N;N;8',
+  const hdr = 'UF Origem;Cidade Origem;UF Destino;Cidade Destino;Distancia km;Eixos;Tipo de Carga (opcional)';
+  const ex  = [
+    'PA;BELEM;CE;MARACANAU;1513;9;',
+    'PA;BELEM;PA;ABAETETUBA;121;6;Granel Solido',
+    'PA;BELEM;PE;PETROLINA;1556;6;',
+    'PA;BELEM;RS;CACHOEIRINHA;3972;6;',
+    'PA;BELEM;MS;DOURADOS;3051;6;',
+    'PA;BELEM;RJ;RIO DE JANEIRO;3188;6;',
   ];
-  const csv = [header].concat(ex).join('\r\n');
+  const csv = [hdr].concat(ex).join('\r\n');
   const a = document.createElement('a');
   a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
-  a.download = 'modelo-cotacoes-frete.csv';
-  a.click();
-}
-
-function exportCSV() {
-  const globalMargin = parseFloat(document.getElementById('sheetMargin').value) || 0;
-  const header = ['#','Descricao','Distancia km','Tipo de Carga','Eixos','Tabela','Comp. Completa','Alto Desempenho','Retorno Vazio','Frete Minimo R$','Margem %','Cotacao R$','Diferenca R$'].join(';');
-  const rows = sheetRows.map(function(row, idx) {
-    const calc = calcSheetRow(row);
-    const inp = document.querySelector('.margin-inp[data-idx="'+idx+'"]');
-    const margin = inp ? parseFloat(inp.value)||0 : globalMargin;
-    if (!calc) return [idx+1,row.desc||'',row.dist,(CARGO_LBL[row.cargo]||row.cargo),row.axles,'—','—','—','—','ERRO','—','—','—'].join(';');
-    const cotacao = calc.total * (1 + margin/100);
-    function fmt(v){ return v.toFixed(2).replace('.',','); }
-    return [idx+1,row.desc||'',row.dist,(CARGO_LBL[row.cargo]||row.cargo),
-      row.axles,calc.tCode,row.fc?'S':'N',row.hp?'S':'N',row.rv?'S':'N',
-      fmt(calc.total),margin,fmt(cotacao),fmt(cotacao-calc.total)
-    ].join(';');
-  });
-  const csv = [header].concat(rows).join('\r\n');
-  const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
-  a.download = 'cotacoes-frete-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.download = 'modelo-planilha-frete.csv';
   a.click();
 }
 
 function handleFileImport(e) {
-  const file = e.target.files[0]; if(!file) return;
+  const file = e.target.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = function(ev) { parseSheetData(ev.target.result); };
   reader.readAsText(file, 'utf-8');
   e.target.value = '';
 }
 
-// Paste zone setup
+function exportCSV() {
+  const margin = parseFloat(document.getElementById('sheetMargin').value) || 0;
+  const cargo  = document.getElementById('sheetCargo').value;
+  const hdr = ['UF Origem','Cidade Origem','UF Destino','Cidade Destino',
+                'Distancia km','Eixos','Tipo de Carga','Tabela','Piso R$','Margem %','Empresa R$'].join(';');
+  const rows = sheetRows.map(function(row) {
+    const calc  = calcSheetRow(row);
+    const cNome = CARGO_LBL[row.cargoOverride || cargo] || (row.cargoOverride || cargo);
+    if (!calc) return [row.ufOrig,row.cidOrig,row.ufDest,row.cidDest,row.dist,row.axles,cNome,'—','—',margin,'—'].join(';');
+    const emp = calc.total * (1 + margin/100);
+    function fmt(v){ return v.toFixed(2).replace('.',','); }
+    return [row.ufOrig,row.cidOrig,row.ufDest,row.cidDest,row.dist,row.axles,
+            cNome,calc.tCode,fmt(calc.total),margin,fmt(emp)].join(';');
+  });
+  const csv = [hdr].concat(rows).join('\r\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
+  a.download = 'cotacoes-frete-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+// ── Paste zone ───────────────────────────────────────────────────────────────
 (function initPasteZone() {
   const zone = document.getElementById('sheetPasteZone');
   const ta   = document.getElementById('sheetPasteArea');
 
   zone.addEventListener('click', function() { ta.focus(); });
-
   zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.classList.add('drag-over'); });
   zone.addEventListener('dragleave', function()  { zone.classList.remove('drag-over'); });
   zone.addEventListener('drop', function(e) {
     e.preventDefault(); zone.classList.remove('drag-over');
     const file = e.dataTransfer.files[0];
-    if (file) {
-      const r = new FileReader();
-      r.onload = function(ev) { parseSheetData(ev.target.result); };
-      r.readAsText(file, 'utf-8');
-      return;
-    }
+    if (file) { const r=new FileReader(); r.onload=function(ev){parseSheetData(ev.target.result);}; r.readAsText(file,'utf-8'); return; }
     const text = e.dataTransfer.getData('text');
     if (text) parseSheetData(text);
   });
-
   ta.addEventListener('paste', function() {
-    setTimeout(function() {
-      const v = ta.value; ta.value = '';
-      if (v.trim()) parseSheetData(v);
-    }, 10);
+    setTimeout(function() { const v=ta.value; ta.value=''; if(v.trim()) parseSheetData(v); }, 10);
   });
 })();
 
