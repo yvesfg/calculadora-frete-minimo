@@ -158,7 +158,7 @@ button, input, select { font-family: inherit; font-size: inherit; }
   width: 2px; background: var(--border);
   z-index: 0;
 }
-.route-field { display: flex; align-items: flex-start; gap: 10px; position: relative; z-index: 1; }
+.route-field { display: flex; align-items: flex-start; gap: 10px; position: relative; }
 .route-dot {
   width: 10px; height: 10px; border-radius: 50%;
   margin-top: 12px; flex-shrink: 0;
@@ -645,6 +645,35 @@ button, input, select { font-family: inherit; font-size: inherit; }
 .uf-loading { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
 .inp:disabled { opacity: .5; cursor: default; }
 
+/* ── Two-column desktop layout ── */
+.calc-grid { display: flex; flex-direction: column; gap: 12px; }
+.calc-left  { display: flex; flex-direction: column; gap: 12px; }
+.calc-right { display: flex; flex-direction: column; }
+.result-empty {
+  display: none; /* hidden on mobile */
+}
+@media (min-width: 960px) {
+  .calc-wrap { max-width: 1180px; }
+  .calc-grid { flex-direction: row; align-items: stretch; gap: 20px; }
+  .calc-left  { flex: 1; min-width: 0; }
+  .calc-right { flex: 1; min-width: 0; }
+  /* Result card always visible as right column placeholder */
+  .calc-right .result-card,
+  .calc-right .result-card.show { display: flex; flex-direction: column; flex: 1; }
+  .calc-right .result-card .result-rows { flex: 1; }
+  /* Empty state shown before first calculation */
+  .result-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    flex: 1; gap: 14px; padding: 48px 24px; text-align: center;
+    color: var(--txt3);
+  }
+  .result-empty svg { opacity: .25; }
+  .result-empty span { font-size: 13px; line-height: 1.6; }
+  .result-card.show .result-empty { display: none; }
+  /* Footer note moves inside right column */
+  .calc-right .footer-note { margin-top: auto; }
+}
+
 </style>
 </head>
 <body>
@@ -692,8 +721,11 @@ button, input, select { font-family: inherit; font-size: inherit; }
   <div class="calc-title">Calculadora de Frete Mínimo</div>
   <div class="calc-sub">Informe a rota e as características da operação para obter o piso mínimo aplicável.</div>
 
+  <div class="calc-grid">
+  <div class="calc-left">
+
   <!-- ROTA -->
-  <div class="card" style="margin-bottom:12px">
+  <div class="card">
     <div class="card-head">
       <div class="card-head-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
@@ -766,7 +798,7 @@ button, input, select { font-family: inherit; font-size: inherit; }
   </div>
 
   <!-- OPERAÇÃO -->
-  <div class="card" style="margin-bottom:12px">
+  <div class="card">
     <div class="card-head">
       <div class="card-head-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
@@ -852,8 +884,15 @@ button, input, select { font-family: inherit; font-size: inherit; }
     </div>
   </div>
 
+  </div><!-- /calc-left -->
+  <div class="calc-right">
+
   <!-- RESULTADO -->
   <div class="result-card" id="resultCard">
+    <div class="result-empty">
+      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Selecione origem e destino,<br>configure a operação e clique em<br><b>Calcular Frete Mínimo</b></span>
+    </div>
     <div class="result-hero">
       <div class="result-hero-main">
         <div class="result-label">Frete Mínimo Calculado</div>
@@ -914,6 +953,9 @@ button, input, select { font-family: inherit; font-size: inherit; }
     <b>Distância:</b> Rota rodoviária via <a href="https://project-osrm.org" target="_blank">OSRM</a> (OpenStreetMap). Pedágio <b>não</b> incluso.<br>
     <a href="https://www.in.gov.br/en/web/dou/-/portaria-suroc-n-4-de-20-de-marco-de-2026-692638596" target="_blank">Portaria SUROC nº 4/2026</a> · Base: Diesel S10 R$ 7,35/L
   </div>
+
+  </div><!-- /calc-right -->
+  </div><!-- /calc-grid -->
 </div>
 </div><!-- /pageCalc -->
 
@@ -1339,9 +1381,20 @@ async function loadStates() {
     const r = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome');
     const states = await r.json();
     const opts = '<option value="">UF</option>' +
-      states.map(s => `<option value="${s.sigla}">${s.sigla} · ${s.nome}</option>`).join('');
-    document.getElementById('originUF').innerHTML = opts;
-    document.getElementById('destUF').innerHTML   = opts;
+      states.map(s => `<option value="${s.sigla}" data-full="${s.sigla} · ${s.nome}">${s.sigla} · ${s.nome}</option>`).join('');
+    ['originUF','destUF'].forEach(id => {
+      const sel = document.getElementById(id);
+      sel.innerHTML = opts;
+      // Restore full names when dropdown opens
+      sel.addEventListener('focus', () => {
+        Array.from(sel.options).forEach(o => { if (o.dataset.full) o.text = o.dataset.full; });
+      });
+      // Show only sigla when collapsed after selection
+      sel.addEventListener('change', () => {
+        const o = sel.options[sel.selectedIndex];
+        if (o && o.value) o.text = o.value;
+      });
+    });
   } catch(e) {
     document.getElementById('routeSubtitle').textContent = 'Erro ao carregar estados — verifique a conexão.';
   }
@@ -1608,7 +1661,9 @@ function calcular() {
     `Fórmula: <code>R$&nbsp;${ccd.toFixed(4)}&nbsp;×&nbsp;${dist}&nbsp;km&nbsp;+&nbsp;R$&nbsp;${cc.toFixed(2)}${S.rv?`&nbsp;+&nbsp;R$&nbsp;${ccd.toFixed(4)}&nbsp;×&nbsp;${dist}&nbsp;km`:''}`;
 
   document.getElementById('resultCard').classList.add('show');
-  document.getElementById('resultCard').scrollIntoView({ behavior:'smooth', block:'nearest' });
+  if (window.innerWidth < 960) {
+    document.getElementById('resultCard').scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
 }
 
 // ═══════════════════════════════════════════════════════
