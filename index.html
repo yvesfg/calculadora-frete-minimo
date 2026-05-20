@@ -1338,7 +1338,7 @@ async function loadStates() {
     const r = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome');
     const states = await r.json();
     const opts = '<option value="">UF</option>' +
-      states.map(s => `<option value="${s.sigla}">${s.sigla}</option>`).join('');
+      states.map(s => `<option value="${s.sigla}">${s.sigla} · ${s.nome}</option>`).join('');
     document.getElementById('originUF').innerHTML = opts;
     document.getElementById('destUF').innerHTML   = opts;
   } catch(e) {
