@@ -153,11 +153,7 @@ button, input, select { font-family: inherit; font-size: inherit; }
 
 /* ── Route section ── */
 .route-container { position: relative; }
-.route-line {
-  position: absolute; left: 17px; top: 44px; bottom: 44px;
-  width: 2px; background: var(--border);
-  z-index: 0;
-}
+.route-line { display: none; } /* removed per design */
 .route-field { display: flex; align-items: flex-start; gap: 10px; position: relative; }
 .route-dot {
   width: 10px; height: 10px; border-radius: 50%;
@@ -341,6 +337,9 @@ button, input, select { font-family: inherit; font-size: inherit; }
   margin-top: 16px;
 }
 .result-card.show { display: block; }
+@media (min-width: 960px) {
+  .result-card { margin-top: 0; }
+}
 
 .result-hero {
   background: linear-gradient(135deg, #1E293B 0%, #162032 100%);
@@ -657,6 +656,12 @@ button, input, select { font-family: inherit; font-size: inherit; }
   .calc-grid { flex-direction: row; align-items: stretch; gap: 20px; }
   .calc-left  { flex: 1; min-width: 0; }
   .calc-right { flex: 1; min-width: 0; }
+
+  /* Left column: last card stretches to fill remaining height */
+  .calc-left .card:last-child { flex: 1; display: flex; flex-direction: column; }
+  .calc-left .card:last-child .card-body { flex: 1; }
+  .calc-left .card:last-child .btn-calc { margin-top: auto; }
+
   /* Result card always visible as right column placeholder */
   .calc-right .result-card,
   .calc-right .result-card.show { display: flex; flex-direction: column; flex: 1; }
@@ -670,8 +675,8 @@ button, input, select { font-family: inherit; font-size: inherit; }
   .result-empty svg { opacity: .25; }
   .result-empty span { font-size: 13px; line-height: 1.6; }
   .result-card.show .result-empty { display: none; }
-  /* Footer note moves inside right column */
-  .calc-right .footer-note { margin-top: auto; }
+  /* Footer note at bottom of right column */
+  .calc-right .footer-note { margin-top: 12px; }
 }
 
 </style>
