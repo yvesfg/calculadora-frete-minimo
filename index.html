@@ -704,6 +704,85 @@ button, input, select { font-family: inherit; font-size: inherit; }
 /* ═══════════════════════════════════════════════════════
    MARGIN CALCULATOR — result card section
 ═══════════════════════════════════════════════════════ */
+/* ── Painel Embarcadora ── */
+.embarcadora-panel {
+  border-top: 1px solid var(--border);
+  margin-top: 0;
+}
+.embarcadora-toggle {
+  display: flex; align-items: center; gap: 8px;
+  padding: 11px 18px;
+  cursor: pointer;
+  user-select: none;
+  transition: background .15s;
+}
+.embarcadora-toggle:hover { background: rgba(255,255,255,.03); }
+.embarcadora-toggle-icon {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: rgba(251,191,36,.1); border: 1px solid rgba(251,191,36,.25);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.embarcadora-toggle-label {
+  flex: 1;
+  font-size: 11.5px; font-weight: 700; color: var(--txt2);
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.embarcadora-toggle-hint {
+  font-size: 10px; color: var(--txt3); font-weight: 400;
+  text-transform: none; letter-spacing: 0; margin-left: 4px;
+}
+.embarcadora-chevron {
+  color: var(--txt3); transition: transform .2s;
+}
+.embarcadora-panel.open .embarcadora-chevron { transform: rotate(180deg); }
+.embarcadora-body {
+  display: none;
+  padding: 0 18px 14px;
+}
+.embarcadora-panel.open .embarcadora-body { display: block; }
+.embarcadora-inp-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+}
+.embarcadora-prefix {
+  font-size: 13px; color: var(--txt2); font-weight: 700; white-space: nowrap;
+}
+.embarcadora-inp {
+  flex: 1; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 7px; padding: 9px 12px;
+  color: var(--txt); font-size: 15px; font-weight: 700; font-family: inherit;
+  transition: border-color .15s;
+  -moz-appearance: textfield;
+}
+.embarcadora-inp::-webkit-outer-spin-button,
+.embarcadora-inp::-webkit-inner-spin-button { -webkit-appearance: none; }
+.embarcadora-inp:focus { outline: none; border-color: rgba(251,191,36,.5); }
+.emb-rows { display: flex; flex-direction: column; gap: 0; }
+.emb-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 0; border-bottom: 1px solid var(--border-sub);
+  font-size: 12.5px;
+}
+.emb-row:last-child { border-bottom: none; }
+.emb-row-lbl { color: var(--txt3); }
+.emb-row-val { font-weight: 700; color: var(--txt); }
+.emb-result {
+  margin-top: 10px; border-radius: 9px; padding: 12px 14px;
+  background: rgba(52,211,153,.06); border: 1px solid rgba(52,211,153,.2);
+}
+.emb-result.negative {
+  background: rgba(239,68,68,.06); border-color: rgba(239,68,68,.2);
+}
+.emb-result-label { font-size: 11px; font-weight: 600; color: var(--txt3); margin-bottom: 4px; }
+.emb-result-value { font-size: 22px; font-weight: 800; color: var(--ok); }
+.emb-result.negative .emb-result-value { color: var(--err); }
+.emb-result-pct { font-size: 11px; color: var(--ok); font-weight: 600; margin-left: 6px; }
+.emb-result.negative .emb-result-pct { color: var(--err); }
+.emb-warn-bar {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2);
+  border-radius: 7px; padding: 7px 10px; margin-bottom: 10px; font-size: 11.5px;
+  color: var(--err);
+}
 .margin-calc { border-top: 1px solid var(--border); }
 .margin-calc-head {
   display: flex; align-items: center; justify-content: space-between;
@@ -1422,6 +1501,57 @@ button, input, select { font-family: inherit; font-size: inherit; }
         <span class="tax-inp-group">INSS Patron.
           <input type="number" id="taxInss" value="4.0" min="0" max="20" step="0.01" class="margin-inp-small" oninput="updateMarginCalc()">%
         </span>
+      </div>
+    </div>
+
+    <!-- PAINEL: Valor proposto pela embarcadora -->
+    <div class="embarcadora-panel" id="embarcadoraPanel" style="display:none">
+      <div class="embarcadora-toggle" onclick="toggleEmbarcadora()">
+        <div class="embarcadora-toggle-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(251,191,36,.9)" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+        </div>
+        <span class="embarcadora-toggle-label">Valor da embarcadora
+          <span class="embarcadora-toggle-hint">— qual minha margem real?</span>
+        </span>
+        <svg class="embarcadora-chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="embarcadora-body">
+        <div class="embarcadora-inp-row">
+          <span class="embarcadora-prefix">R$</span>
+          <input type="number" id="embarcadoraVal" class="embarcadora-inp"
+            placeholder="0,00" min="0" step="0.01"
+            oninput="updateEmbarcadoraCalc()"
+            title="Valor proposto pela embarcadora">
+        </div>
+        <div id="embWarnBar" class="emb-warn-bar" style="display:none">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span id="embWarnMsg">Valor abaixo do piso ANTT</span>
+        </div>
+        <div class="emb-rows" id="embRows" style="display:none">
+          <div class="emb-row">
+            <span class="emb-row-lbl">Piso ANTT</span>
+            <span class="emb-row-val" id="embPiso">—</span>
+          </div>
+          <div class="emb-row">
+            <span class="emb-row-lbl">Valor proposto</span>
+            <span class="emb-row-val" id="embProposto">—</span>
+          </div>
+          <div class="emb-row">
+            <span class="emb-row-lbl">Diferença vs piso</span>
+            <span class="emb-row-val" id="embDiff">—</span>
+          </div>
+          <div class="emb-row">
+            <span class="emb-row-lbl">Impostos s/ proposto (PIS+COFINS+INSS)</span>
+            <span class="emb-row-val" style="color:var(--err)" id="embImpostos">—</span>
+          </div>
+        </div>
+        <div class="emb-result" id="embResult" style="display:none">
+          <div class="emb-result-label">LUCRO LÍQUIDO REAL</div>
+          <div style="display:flex;align-items:baseline">
+            <span class="emb-result-value" id="embLucro">—</span>
+            <span class="emb-result-pct" id="embLucroPct"></span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2527,6 +2657,63 @@ function updateMarginCalc() {
   }
 }
 
+function toggleEmbarcadora() {
+  const panel = document.getElementById('embarcadoraPanel');
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) {
+    document.getElementById('embarcadoraVal').focus();
+    updateEmbarcadoraCalc();
+  }
+}
+
+function updateEmbarcadoraCalc() {
+  const raw = parseFloat((document.getElementById('embarcadoraVal').value || '').replace(',', '.'));
+  const warnBar  = document.getElementById('embWarnBar');
+  const rows     = document.getElementById('embRows');
+  const result   = document.getElementById('embResult');
+
+  if (!raw || raw <= 0 || !lastPiso) {
+    warnBar.style.display = 'none';
+    rows.style.display    = 'none';
+    result.style.display  = 'none';
+    return;
+  }
+
+  const T = (parseFloat(document.getElementById('taxPis').value)    || 0) / 100
+          + (parseFloat(document.getElementById('taxCofins').value)  || 0) / 100
+          + (parseFloat(document.getElementById('taxInss').value)    || 0) / 100;
+
+  const impostos = raw * T;
+  const lucro    = raw - impostos - lastPiso;
+  const lucroPct = (lucro / raw) * 100;
+  const diff     = raw - lastPiso;
+  const diffPct  = (diff / lastPiso) * 100;
+  const abaixo   = raw < lastPiso;
+
+  // Warn bar
+  warnBar.style.display = abaixo ? 'flex' : 'none';
+  document.getElementById('embWarnMsg').textContent =
+    `Valor R$ ${(lastPiso - raw).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})} abaixo do piso ANTT`;
+
+  // Detail rows
+  rows.style.display = 'flex';
+  document.getElementById('embPiso').textContent = R(lastPiso);
+  document.getElementById('embProposto').textContent = R(raw);
+
+  const diffEl = document.getElementById('embDiff');
+  const sign = diff >= 0 ? '+' : '−';
+  diffEl.textContent = `${sign} R$ ${Math.abs(diff).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})} (${diffPct >= 0 ? '+' : ''}${diffPct.toFixed(1)}%)`;
+  diffEl.style.color = diff >= 0 ? 'var(--ok)' : 'var(--err)';
+
+  document.getElementById('embImpostos').textContent = '−' + R(impostos);
+
+  // Result block
+  result.style.display = 'block';
+  result.className = 'emb-result' + (lucro < 0 ? ' negative' : '');
+  document.getElementById('embLucro').textContent = (lucro < 0 ? '−' : '') + R(Math.abs(lucro));
+  document.getElementById('embLucroPct').textContent = `(${lucroPct.toFixed(1)}% do fat.)`;
+}
+
 function showErr(msg) {
   const el = document.getElementById('errBanner');
   document.getElementById('errMsg').textContent = msg;
@@ -2579,6 +2766,8 @@ function calcular() {
   lastPiso = total;
   document.getElementById('marginCalc').style.display = '';
   updateMarginCalc();
+  document.getElementById('embarcadoraPanel').style.display = '';
+  updateEmbarcadoraCalc();
 
   if (window.innerWidth < 960) {
     document.getElementById('resultCard').scrollIntoView({ behavior:'smooth', block:'nearest' });
