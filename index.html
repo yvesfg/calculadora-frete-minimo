@@ -724,7 +724,7 @@ button, input, select { font-family: inherit; font-size: inherit; }
 }
 .embarcadora-toggle-hint {
   font-size: 10px; color: var(--txt3); font-weight: 400;
-  text-transform: none; letter-spacing: 0; margin-left: 4px;
+  text-transform: none; letter-spacing: 0; margin-top: 2px; display: block;
 }
 .embarcadora-body { padding: 14px 16px 14px; }
 .embarcadora-inp-row {
@@ -784,10 +784,13 @@ button, input, select { font-family: inherit; font-size: inherit; }
 }
 
 /* Compact overrides for margin section inside grid */
-.results-lower-grid .margin-calc-head         { padding: 10px 12px 8px; }
+.results-lower-grid .margin-calc-head,
+.results-lower-grid .embarcadora-toggle       { min-height: 54px; align-items: center; }
+.results-lower-grid .margin-calc-head         { padding: 0 12px; flex-wrap: nowrap; gap: 8px; }
 .results-lower-grid .margin-calc > div[style]  { padding: 5px 0 0 !important; }
 .results-lower-grid .margin-scenario-head      { padding: 7px 10px; flex-wrap: wrap; row-gap: 1px; }
 .results-lower-grid .margin-scenario-tag       { font-size: 10px; }
+.results-lower-grid .margin-calc-title         { white-space: nowrap; font-size: 10px; }
 .results-lower-grid .margin-scenario-price     { width: 100%; margin-left: 0; padding-left: 14px; font-size: 14px; }
 .results-lower-grid .margin-detail-row         { padding: 4px 10px; font-size: 11px; }
 .results-lower-grid .margin-detail-label       { font-size: 10.5px; }
@@ -800,6 +803,7 @@ button, input, select { font-family: inherit; font-size: inherit; }
 .results-lower-grid .margin-tax-config         { padding: 8px 12px 14px; gap: 6px 10px; justify-content: center; margin-top: auto; }
 .results-lower-grid .margin-tax-config > span:first-child { width: 100%; text-align: center; }
 .results-lower-grid .margin-target-inp         { width: 56px; height: 28px; font-size: 13px; }
+.results-lower-grid .margin-inp-group          { flex-wrap: nowrap; }
 
 .margin-calc { border-top: 1px solid var(--border); }
 .margin-calc-head {
@@ -1456,8 +1460,8 @@ button, input, select { font-family: inherit; font-size: inherit; }
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
           Cálculo de Margem
         </div>
-        <div class="margin-inp-group">
-          <span class="margin-inp-label">Margem desejada</span>
+        <div class="margin-inp-group" style="margin-left:auto">
+          <span class="margin-inp-label">Margem</span>
           <input type="number" id="calcMarginPct" value="13" min="0" max="89" step="0.5"
             class="margin-target-inp" oninput="updateMarginCalc()" title="Margem desejada (%)">
           <span style="font-size:13px;color:var(--primary);font-weight:700">%</span>
@@ -1530,9 +1534,10 @@ button, input, select { font-family: inherit; font-size: inherit; }
         <div class="embarcadora-toggle-icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(251,191,36,.9)" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
         </div>
-        <span class="embarcadora-toggle-label">Valor da embarcadora
-          <span class="embarcadora-toggle-hint">— qual minha margem real?</span>
-        </span>
+        <div>
+          <div class="embarcadora-toggle-label">Valor Proposto</div>
+          <div class="embarcadora-toggle-hint">Qual minha margem real?</div>
+        </div>
       </div>
       <div class="embarcadora-body">
         <div class="embarcadora-inp-row">
