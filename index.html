@@ -813,10 +813,14 @@ button, input, select { font-family: inherit; font-size: inherit; }
   border-bottom: 1px solid var(--border-sub);
   background: rgba(96,165,250,.04);
 }
+.margin-calc-icon {
+  width: 26px; height: 26px; border-radius: 7px;
+  background: rgba(96,165,250,.1); border: 1px solid rgba(96,165,250,.25);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
 .margin-calc-title {
   font-size: 11px; font-weight: 700; color: var(--txt3);
   text-transform: uppercase; letter-spacing: .08em;
-  display: flex; align-items: center; gap: 6px;
 }
 .margin-inp-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .margin-inp-label { font-size: 11px; color: var(--txt3); white-space: nowrap; }
@@ -1456,10 +1460,10 @@ button, input, select { font-family: inherit; font-size: inherit; }
     <!-- MARGIN CALCULATION SECTION -->
     <div class="margin-calc" id="marginCalc">
       <div class="margin-calc-head">
-        <div class="margin-calc-title">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
-          Cálculo de Margem
+        <div class="margin-calc-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(96,165,250,.9)" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
         </div>
+        <div class="margin-calc-title">Cálculo de Margem</div>
         <div class="margin-inp-group" style="margin-left:auto">
           <span class="margin-inp-label">Margem</span>
           <input type="number" id="calcMarginPct" value="13" min="0" max="89" step="0.5"
