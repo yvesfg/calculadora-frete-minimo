@@ -1834,8 +1834,10 @@ const CONFIG = {
   // 3. Adicione a URL do seu deploy em "Authorized JavaScript origins"
   // 4. Cole o Client ID abaixo
   googleClientId : '977507812731-0uf4n9do7lod3uq53lh5n1a6dd19h60p.apps.googleusercontent.com',
-  allowedEmails  : ['yvesfg@gmail.com', 'ocimarnunes98@gmail.com'],
+  allowedEmails  : ['yvesfg@gmail.com'],
   adminEmails    : ['yvesfg@gmail.com'],
+  supabaseUrl    : 'https://qdrhkkjawklqfsoyxhpd.supabase.co',
+  supabaseKey    : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkcmhra2phd2tscWZzb3l4aHBkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1OTY2ODQsImV4cCI6MjA4OTE3MjY4NH0.zHl9-Ei9IDBcxzoZDz650E4JsBeV0HsQqTDgDZ4K1B8',
 };
 
 // ═══════════════════════════════════════════════════════
@@ -2042,11 +2044,39 @@ let activeTableTab = 'A';
 let lastCalcResult = null;
 
 // ═══════════════════════════════════════════════════════
+// SUPABASE HELPER
+// ═══════════════════════════════════════════════════════
+function supaRESTFetch(method, path, body) {
+  const url = CONFIG.supabaseUrl + '/rest/v1/' + path;
+  return fetch(url, {
+    method,
+    headers: {
+      'apikey'       : CONFIG.supabaseKey,
+      'Authorization': 'Bearer ' + CONFIG.supabaseKey,
+      'Content-Type' : 'application/json',
+      'Prefer'       : method === 'POST' ? 'return=representation,resolution=merge-duplicates' : 'return=representation',
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  }).then(r => r.ok ? (r.status === 204 ? null : r.json()) : r.text().then(t => { throw new Error(t); }));
+}
+
+async function loadAllowedFromSupabase() {
+  try {
+    const data = await supaRESTFetch('GET', 'frete_usuarios?select=email,role');
+    if (Array.isArray(data) && data.length > 0) {
+      CONFIG.allowedEmails = data.map(u => u.email.toLowerCase());
+      CONFIG.adminEmails   = data.filter(u => u.role === 'admin').map(u => u.email.toLowerCase());
+    }
+  } catch(e) { /* usa fallback do CONFIG */ }
+}
+
+// ═══════════════════════════════════════════════════════
 // AUTH — Google Identity Services
 // ═══════════════════════════════════════════════════════
 let currentUser = null;
 
-function initAuth() {
+async function initAuth() {
+  await loadAllowedFromSupabase();
   const saved = sessionStorage.getItem('frete_auth');
   if (saved) {
     try {
@@ -2091,7 +2121,7 @@ function showLoginOverlay() {
   }
 }
 
-function handleGoogleCredential(response) {
+async function handleGoogleCredential(response) {
   try {
     const b64 = response.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
     const payload = JSON.parse(decodeURIComponent(
@@ -2099,6 +2129,7 @@ function handleGoogleCredential(response) {
     ));
     const email = (payload.email || '').toLowerCase();
     const errEl = document.getElementById('loginError');
+    await loadAllowedFromSupabase();
     if (!isAllowed(email)) {
       errEl.textContent = `Acesso não autorizado para ${email}. Solicite acesso ao administrador.`;
       errEl.style.display = 'block';
@@ -2974,28 +3005,22 @@ function exportCSV() {
 // ═══════════════════════════════════════════════════════
 // ─── User Management ──────────────────────────────────────────────────────────
 
-function getUserList() {
+async function getUserList() {
   try {
-    const saved = localStorage.getItem('frete_users');
-    if (saved) return JSON.parse(saved);
+    const data = await supaRESTFetch('GET', 'frete_usuarios?select=email,role&order=created_at.asc');
+    if (Array.isArray(data)) return data;
   } catch(e) {}
-  // Build from CONFIG defaults
   return CONFIG.allowedEmails.map(e => ({
     email : e.toLowerCase(),
-    role  : CONFIG.adminEmails.map(a => a.toLowerCase()).includes(e.toLowerCase()) ? 'admin' : 'user',
+    role  : CONFIG.adminEmails.includes(e.toLowerCase()) ? 'admin' : 'user',
   }));
 }
 
-function saveUserList(users) {
-  try { localStorage.setItem('frete_users', JSON.stringify(users)); } catch(e) {}
-  CONFIG.allowedEmails = users.map(u => u.email);
-  CONFIG.adminEmails   = users.filter(u => u.role === 'admin').map(u => u.email);
-}
-
-function renderUserList() {
+async function renderUserList() {
   const container = document.getElementById('userList');
   if (!container) return;
-  const users = getUserList();
+  container.innerHTML = '<div style="padding:16px 18px;text-align:center;color:var(--txt3);font-size:12px">Carregando...</div>';
+  const users = await getUserList();
   if (!users.length) {
     container.innerHTML = '<div style="padding:20px 18px;text-align:center;color:var(--txt3);font-size:12.5px">Nenhum usuário cadastrado.</div>';
     return;
@@ -3026,31 +3051,39 @@ function renderUserList() {
   }).join('');
 }
 
-function addUser() {
+async function addUser() {
   const email = (document.getElementById('newUserEmail').value || '').trim().toLowerCase();
   const role  = document.getElementById('newUserRole').value || 'user';
   if (!email || !email.includes('@') || !email.includes('.')) {
     showUserStatus('err', '⚠ Digite um e-mail válido.');
     return;
   }
-  const users = getUserList();
-  if (users.find(u => u.email === email)) {
-    showUserStatus('warn', `⚠ ${email} já possui acesso.`);
-    return;
+  try {
+    await supaRESTFetch('POST', 'frete_usuarios', [{ email, role }]);
+    await loadAllowedFromSupabase();
+    await renderUserList();
+    document.getElementById('newUserEmail').value = '';
+    showUserStatus('ok', `✓ ${email} adicionado como ${role === 'admin' ? 'Admin' : 'Usuário'}.`);
+  } catch(e) {
+    const msg = e.message || '';
+    if (msg.includes('duplicate') || msg.includes('already exists') || msg.includes('23505')) {
+      showUserStatus('warn', `⚠ ${email} já possui acesso.`);
+    } else {
+      showUserStatus('err', '❌ Erro ao adicionar usuário.');
+    }
   }
-  users.push({ email, role });
-  saveUserList(users);
-  renderUserList();
-  document.getElementById('newUserEmail').value = '';
-  showUserStatus('ok', `✓ ${email} adicionado como ${role === 'admin' ? 'Admin' : 'Usuário'}.`);
 }
 
-function removeUser(email) {
+async function removeUser(email) {
   if (!confirm(`Remover acesso de ${email}?`)) return;
-  const users = getUserList().filter(u => u.email !== email);
-  saveUserList(users);
-  renderUserList();
-  showUserStatus('ok', `✓ Acesso de ${email} removido.`);
+  try {
+    await supaRESTFetch('DELETE', `frete_usuarios?email=eq.${encodeURIComponent(email)}`);
+    await loadAllowedFromSupabase();
+    await renderUserList();
+    showUserStatus('ok', `✓ Acesso de ${email} removido.`);
+  } catch(e) {
+    showUserStatus('err', '❌ Erro ao remover usuário.');
+  }
 }
 
 function showUserStatus(type, msg) {
@@ -3063,7 +3096,7 @@ function showUserStatus(type, msg) {
   showUserStatus._t = setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 
-function populateAdminPanel() {
+async function populateAdminPanel() {
   const s = id => document.getElementById(id);
   if (s('adminPortaria'))        s('adminPortaria').value        = CONFIG.portaria;
   if (s('adminDataBase'))        s('adminDataBase').value        = CONFIG.dataBase;
@@ -3071,7 +3104,7 @@ function populateAdminPanel() {
   if (s('adminPortariaUrl'))     s('adminPortariaUrl').value     = CONFIG.portariaUrl;
   if (s('adminCurrentPortaria')) s('adminCurrentPortaria').textContent = CONFIG.portaria;
   if (s('adminCurrentData'))     s('adminCurrentData').textContent     = CONFIG.dataBase;
-  renderUserList();
+  await renderUserList();
 }
 
 function resetConfigFields() {
@@ -3259,13 +3292,6 @@ function refreshBannerFromConfig() {
       const parsed = JSON.parse(rawOv);
       for (const k of Object.keys(IDX)) delete IDX[k];
       for (const [t,,,cargo,axles,ccd,cc] of parsed) IDX[`${t}|${cargo}|${axles}`] = {ccd, cc};
-    }
-    // Load persisted user list so isAllowed/isAdmin work before first render
-    const usersOv = localStorage.getItem('frete_users');
-    if (usersOv) {
-      const users = JSON.parse(usersOv);
-      CONFIG.allowedEmails = users.map(u => u.email);
-      CONFIG.adminEmails   = users.filter(u => u.role === 'admin').map(u => u.email);
     }
   } catch(e) {}
   refreshBannerFromConfig();
