@@ -2184,7 +2184,7 @@ function supaRESTFetch(method, path, body) {
       'apikey'       : CONFIG.supabaseKey,
       'Authorization': 'Bearer ' + CONFIG.supabaseKey,
       'Content-Type' : 'application/json',
-      'Prefer'       : method === 'POST' ? 'return=representation,resolution=merge-duplicates' : 'return=representation',
+      'Prefer'       : method === 'POST' ? 'return=representation,resolution=merge-duplicates' : method === 'DELETE' ? 'return=minimal' : 'return=representation',
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
   }).then(r => r.ok ? (r.status === 204 ? null : r.json()) : r.text().then(t => { throw new Error(t); }));
@@ -2206,22 +2206,25 @@ async function loadAllowedFromSupabase() {
 let currentUser = null;
 
 async function initAuth() {
-  await loadAllowedFromSupabase();
   const saved = sessionStorage.getItem('frete_auth');
   if (saved) {
+    // load allowlist first so isAllowed() has fresh data before restoring session
+    await loadAllowedFromSupabase();
     try {
       const u = JSON.parse(saved);
       if (u && u.email && isAllowed(u.email)) { setUser(u); return; }
     } catch(e) {}
   }
+  // no valid session — show login immediately, then fetch allowlist in background
   showLoginOverlay();
+  loadAllowedFromSupabase();
 }
 
 function isAllowed(email) {
-  return CONFIG.allowedEmails.map(e => e.toLowerCase()).includes((email || '').toLowerCase());
+  return CONFIG.allowedEmails.includes((email || '').toLowerCase());
 }
 function isAdmin(email) {
-  return CONFIG.adminEmails.map(e => e.toLowerCase()).includes((email || '').toLowerCase());
+  return CONFIG.adminEmails.includes((email || '').toLowerCase());
 }
 
 function showLoginOverlay() {
@@ -2300,9 +2303,6 @@ function setUser(user) {
     const adminTab = document.getElementById('navAdmin');
     if (adminTab) adminTab.style.display = '';
     populateAdminPanel();
-  }
-  // Update banner text for admin users
-  if (user.isAdmin) {
     const bannerEl = document.querySelector('.update-banner-text');
     if (bannerEl) {
       bannerEl.innerHTML =
@@ -3221,6 +3221,7 @@ async function renderUserList() {
     const avatarStyle = isAdmin
       ? 'background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.3);color:var(--warn)'
       : '';
+    const safeEmail = u.email.replace(/"/g, '&quot;');
     return `<div class="user-item">
       <div class="user-avatar-sm" style="${avatarStyle}">${initial}</div>
       <div class="user-info">
@@ -3230,7 +3231,7 @@ async function renderUserList() {
         <span class="role-dot"></span>${isAdmin ? 'Admin' : 'Usuário'}
       </span>
       ${!isYou
-        ? `<button class="btn-remove-user" onclick="removeUser('${u.email}')">
+        ? `<button class="btn-remove-user" data-email="${safeEmail}">
             <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             Remover
           </button>`
@@ -3238,6 +3239,9 @@ async function renderUserList() {
       }
     </div>`;
   }).join('');
+  container.querySelectorAll('.btn-remove-user').forEach(btn => {
+    btn.addEventListener('click', () => removeUser(btn.dataset.email));
+  });
 }
 
 async function addUser() {
