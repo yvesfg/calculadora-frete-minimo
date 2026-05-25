@@ -3419,10 +3419,21 @@ async function checkForNewPortaria() {
   const [day, month, year] = CONFIG.dataBase.split('/');
   const afterDate = new Date(`${year}-${month}-${day}`);
 
-  // Try multiple CORS proxies
+  // Try multiple CORS proxies — each entry: { url, parse }
+  // allorigins wraps response in { contents: "..." }; others return raw JSON
   const proxies = [
-    url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-    url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+    {
+      url:   u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+      parse: r => typeof r.contents === 'string' ? JSON.parse(r.contents) : null,
+    },
+    {
+      url:   u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+      parse: r => (r && typeof r === 'object' ? r : (typeof r === 'string' ? JSON.parse(r) : null)),
+    },
+    {
+      url:   u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+      parse: r => (r && typeof r === 'object' ? r : (typeof r === 'string' ? JSON.parse(r) : null)),
+    },
   ];
   const targets = [
     'https://www.in.gov.br/servicos/busca-dou/api?q=portaria+suroc+frete+minimo&delta=10&sortType=2',
@@ -3434,12 +3445,10 @@ async function checkForNewPortaria() {
   for (const proxy of proxies) {
     for (const target of targets) {
       try {
-        const res = await fetch(proxy(target), { signal: AbortSignal.timeout(9000) });
+        const res = await fetch(proxy.url(target), { signal: AbortSignal.timeout(9000) });
         if (!res.ok) continue;
-        const outer = await res.json();
-        const raw   = typeof outer.contents === 'string' ? outer.contents : (typeof outer === 'string' ? outer : null);
-        if (!raw) continue;
-        const data = JSON.parse(raw);
+        const raw  = await res.json();
+        const data = proxy.parse(raw);
         if (!data || !Array.isArray(data.items)) continue;
 
         const newer = data.items.filter(item => {
