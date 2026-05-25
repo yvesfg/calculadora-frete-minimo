@@ -833,10 +833,10 @@ button, input, select { font-family: inherit; font-size: inherit; }
 }
 .margin-target-inp:focus { border-color: var(--primary); }
 .margin-inp-small {
-  width: 52px; height: 26px; text-align: center;
+  width: 44px; height: 24px; text-align: center;
   background: var(--bg); border: 1px solid var(--border);
   border-radius: var(--r-sm); color: var(--txt);
-  padding: 0 4px; font-size: 11.5px; font-weight: 600; outline: none;
+  padding: 0 3px; font-size: 10.5px; font-weight: 600; outline: none;
   transition: border-color var(--ease);
 }
 .margin-inp-small:focus { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-dim); }
@@ -865,11 +865,11 @@ button, input, select { font-family: inherit; font-size: inherit; }
 }
 .margin-tax-config {
   padding: 0 18px 14px;
-  display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
+  display: flex; gap: 8px; flex-wrap: nowrap; align-items: center;
   border-top: 1px solid var(--border-sub);
-  padding-top: 10px;
+  padding-top: 10px; overflow: hidden;
 }
-.tax-inp-group { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--txt3); }
+.tax-inp-group { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--txt3); white-space: nowrap; }
 
 /* ═══════════════════════════════════════════════════════
    PLANILHA — dual margin columns
@@ -1481,8 +1481,20 @@ button, input, select { font-family: inherit; font-size: inherit; }
             <span class="margin-scenario-price" id="mSimplesPrice" style="color:var(--txt)">—</span>
           </div>
           <div class="margin-detail-row">
-            <span class="margin-detail-label">Impostos (PIS + COFINS + INSS)</span>
-            <span class="margin-detail-val" id="mSimplesTax" style="color:var(--err)">—</span>
+            <span class="margin-detail-label">PIS</span>
+            <span class="margin-detail-val" id="mSimplesTaxPis" style="color:var(--err)">—</span>
+          </div>
+          <div class="margin-detail-row">
+            <span class="margin-detail-label">COFINS</span>
+            <span class="margin-detail-val" id="mSimplesTaxCofins" style="color:var(--err)">—</span>
+          </div>
+          <div class="margin-detail-row">
+            <span class="margin-detail-label">INSS Patronal</span>
+            <span class="margin-detail-val" id="mSimplesTaxInss" style="color:var(--err)">—</span>
+          </div>
+          <div class="margin-detail-row" style="background:rgba(248,113,113,.04)">
+            <span class="margin-detail-label" style="font-weight:600;color:var(--txt)">Total impostos</span>
+            <span class="margin-detail-val" id="mSimplesTax" style="color:var(--err);font-weight:700">—</span>
           </div>
           <div class="margin-net-row" id="mSimplesNetRow">
             <span class="margin-net-label" id="mSimplesNetLabel">Lucro Líquido Real</span>
@@ -1503,8 +1515,20 @@ button, input, select { font-family: inherit; font-size: inherit; }
             <span class="margin-scenario-price" id="mRealPrice" style="color:var(--ok)">—</span>
           </div>
           <div class="margin-detail-row">
-            <span class="margin-detail-label">Impostos (PIS + COFINS + INSS)</span>
-            <span class="margin-detail-val" id="mRealTax" style="color:var(--err)">—</span>
+            <span class="margin-detail-label">PIS</span>
+            <span class="margin-detail-val" id="mRealTaxPis" style="color:var(--err)">—</span>
+          </div>
+          <div class="margin-detail-row">
+            <span class="margin-detail-label">COFINS</span>
+            <span class="margin-detail-val" id="mRealTaxCofins" style="color:var(--err)">—</span>
+          </div>
+          <div class="margin-detail-row">
+            <span class="margin-detail-label">INSS Patronal</span>
+            <span class="margin-detail-val" id="mRealTaxInss" style="color:var(--err)">—</span>
+          </div>
+          <div class="margin-detail-row" style="background:rgba(248,113,113,.04)">
+            <span class="margin-detail-label" style="font-weight:600;color:var(--txt)">Total impostos</span>
+            <span class="margin-detail-val" id="mRealTax" style="color:var(--err);font-weight:700">—</span>
           </div>
           <div class="margin-net-row" style="background:rgba(52,211,153,.04);border-top:1px solid rgba(52,211,153,.15)">
             <span class="margin-net-label" style="color:var(--ok)">Lucro Líquido Garantido</span>
@@ -1519,14 +1543,14 @@ button, input, select { font-family: inherit; font-size: inherit; }
       <div class="margin-spacer"></div>
 
       <div class="margin-tax-config">
-        <span style="font-size:10.5px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Tributos s/ faturamento:</span>
+        <span style="font-size:9.5px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap">Tributos s/ fat.:</span>
         <span class="tax-inp-group">PIS
           <input type="number" id="taxPis" value="1.65" min="0" max="20" step="0.01" class="margin-inp-small" oninput="updateMarginCalc()">%
         </span>
         <span class="tax-inp-group">COFINS
           <input type="number" id="taxCofins" value="7.6" min="0" max="20" step="0.01" class="margin-inp-small" oninput="updateMarginCalc()">%
         </span>
-        <span class="tax-inp-group">INSS Patron.
+        <span class="tax-inp-group">INSS
           <input type="number" id="taxInss" value="4.0" min="0" max="20" step="0.01" class="margin-inp-small" oninput="updateMarginCalc()">%
         </span>
       </div>
@@ -2639,13 +2663,19 @@ function updateMarginCalc() {
   const T      = (pis + cofins + inss) / 100;
 
   // ── Cenário 1: Markup direto sobre o piso ──────────────────────────────
-  const simpPrice  = lastPiso * (1 + M / 100);
-  const simpTaxes  = simpPrice * T;
-  const simpNet    = simpPrice - lastPiso - simpTaxes;
-  const simpNetPct = simpPrice > 0 ? (simpNet / simpPrice) * 100 : 0;
+  const simpPrice      = lastPiso * (1 + M / 100);
+  const simpTaxPis     = simpPrice * pis / 100;
+  const simpTaxCofins  = simpPrice * cofins / 100;
+  const simpTaxInss    = simpPrice * inss / 100;
+  const simpTaxes      = simpTaxPis + simpTaxCofins + simpTaxInss;
+  const simpNet        = simpPrice - lastPiso - simpTaxes;
+  const simpNetPct     = simpPrice > 0 ? (simpNet / simpPrice) * 100 : 0;
 
-  document.getElementById('mSimplesPrice').textContent = R(simpPrice);
-  document.getElementById('mSimplesTax').textContent   = '−' + R(simpTaxes);
+  document.getElementById('mSimplesPrice').textContent     = R(simpPrice);
+  document.getElementById('mSimplesTaxPis').textContent    = '−' + R(simpTaxPis);
+  document.getElementById('mSimplesTaxCofins').textContent = '−' + R(simpTaxCofins);
+  document.getElementById('mSimplesTaxInss').textContent   = '−' + R(simpTaxInss);
+  document.getElementById('mSimplesTax').textContent       = '−' + R(simpTaxes);
 
   const netEl    = document.getElementById('mSimplesNet');
   const netRow   = document.getElementById('mSimplesNetRow');
@@ -2673,16 +2703,22 @@ function updateMarginCalc() {
   // ── Cenário 2: Preço real — cobre impostos e garante margem líquida ────
   const denom = 1 - T - M / 100;
   if (denom > 0.001) {
-    const realPrice  = lastPiso / denom;
-    const realTaxes  = realPrice * T;
-    const realNet    = realPrice - lastPiso - realTaxes;
-    const realNetPct = realPrice > 0 ? (realNet / realPrice) * 100 : 0;
-    document.getElementById('mRealPrice').textContent = R(realPrice);
-    document.getElementById('mRealTax').textContent   = '−' + R(realTaxes);
-    document.getElementById('mRealNet').textContent   = R(realNet);
-    document.getElementById('mRealPct').textContent   = `(${realNetPct.toFixed(1)}% do fat.)`;
+    const realPrice     = lastPiso / denom;
+    const realTaxPis    = realPrice * pis / 100;
+    const realTaxCofins = realPrice * cofins / 100;
+    const realTaxInss   = realPrice * inss / 100;
+    const realTaxes     = realTaxPis + realTaxCofins + realTaxInss;
+    const realNet       = realPrice - lastPiso - realTaxes;
+    const realNetPct    = realPrice > 0 ? (realNet / realPrice) * 100 : 0;
+    document.getElementById('mRealPrice').textContent      = R(realPrice);
+    document.getElementById('mRealTaxPis').textContent     = '−' + R(realTaxPis);
+    document.getElementById('mRealTaxCofins').textContent  = '−' + R(realTaxCofins);
+    document.getElementById('mRealTaxInss').textContent    = '−' + R(realTaxInss);
+    document.getElementById('mRealTax').textContent        = '−' + R(realTaxes);
+    document.getElementById('mRealNet').textContent        = R(realNet);
+    document.getElementById('mRealPct').textContent        = `(${realNetPct.toFixed(1)}% do fat.)`;
   } else {
-    ['mRealPrice','mRealTax','mRealNet'].forEach(id => document.getElementById(id).textContent = '—');
+    ['mRealPrice','mRealTaxPis','mRealTaxCofins','mRealTaxInss','mRealTax','mRealNet'].forEach(id => document.getElementById(id).textContent = '—');
     document.getElementById('mRealPct').textContent = 'Margem + impostos ≥ 100%';
   }
 }
