@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { HubGate } from './HubGuard.jsx';
 import CalcPage from './pages/CalcPage.jsx';
 import TablePage from './pages/TablePage.jsx';
 import SheetPage from './pages/SheetPage.jsx';
@@ -13,6 +14,7 @@ export default function App() {
   const [page, setPage] = useState('calc');
 
   return (
+    <HubGate>
     <div className="app-wrap">
       <nav className="tab-nav">
         {TABS.map(t => (
@@ -32,5 +34,6 @@ export default function App() {
         {page === 'sheet' && <SheetPage />}
       </main>
     </div>
+    </HubGate>
   );
 }
