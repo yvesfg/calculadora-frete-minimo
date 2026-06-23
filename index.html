@@ -1146,6 +1146,11 @@ button, input, select { font-family: inherit; font-size: inherit; }
 .perm-ok { color: var(--ok); }
 .perm-no { color: var(--border); }
 
+/* ── Perfil Tributário: pills PF/PJ ── */
+.tax-pill{flex:1;padding:5px 6px;border-radius:6px;border:1.5px solid var(--border);background:transparent;color:var(--txt3);font-size:9.5px;font-weight:600;cursor:pointer;transition:var(--ease);font-family:var(--font);text-align:center;line-height:1.2}
+.tax-pill.active{border-color:var(--primary);background:var(--primary-dim);color:var(--primary)}
+.tax-pill:hover:not(.active){border-color:rgba(100,116,139,.6);color:var(--txt2)}
+
 </style>
 </head>
 <body>
@@ -1470,6 +1475,22 @@ button, input, select { font-family: inherit; font-size: inherit; }
             class="margin-target-inp" oninput="updateMarginCalc()" title="Margem desejada (%)">
           <span style="font-size:13px;color:var(--primary);font-weight:700">%</span>
         </div>
+      </div>
+
+      <!-- PERFIL TRIBUTÁRIO — PF/PJ + Regime -->
+      <div style="padding:10px 16px 12px;border-bottom:1px solid var(--border-sub)">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--txt3);margin-bottom:5px">Regime da empresa</div>
+        <div style="display:flex;gap:5px;margin-bottom:10px">
+          <button class="tax-pill active" id="pillEmpLR" onclick="setEmpRegime('lr')">Lucro Real / Presumido</button>
+          <button class="tax-pill" id="pillEmpSN" onclick="setEmpRegime('sn')">Simples Nacional</button>
+        </div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--txt3);margin-bottom:5px">Motorista</div>
+        <div style="display:flex;gap:5px">
+          <button class="tax-pill active" id="pillMotPF"    onclick="setMotorista('pf')">PF / Autônomo</button>
+          <button class="tax-pill"        id="pillMotPJSN"  onclick="setMotorista('pj_sn')">PJ — Simples</button>
+          <button class="tax-pill"        id="pillMotPJLR"  onclick="setMotorista('pj_lr')">PJ — L.Real/Pres.</button>
+        </div>
+        <div id="taxProfileNote" style="font-size:9.5px;color:var(--txt3);margin-top:7px;line-height:1.5;padding:5px 8px;background:rgba(96,165,250,.05);border-radius:5px;border:1px solid rgba(96,165,250,.1)"></div>
       </div>
 
       <!-- Cenário 1: Markup simples -->
@@ -2723,6 +2744,49 @@ function updateMarginCalc() {
   }
 }
 
+
+// ═══════════════════════════════════════════════════════
+// PERFIL TRIBUTÁRIO — PF / PJ
+// ═══════════════════════════════════════════════════════
+let taxEmpRegime = 'lr';   // 'lr' | 'sn'
+let taxMotorista = 'pf';   // 'pf' | 'pj_sn' | 'pj_lr'
+
+const TAX_PROFILES = {
+  lr_pf:    { pis: 1.2375, cofins: 5.70,  note: 'Lucro Real + PF Autônomo: crédito presumido 75% → PIS 1,2375% · COFINS 5,70% (IN RFB 2.121/2022 art. 77)' },
+  lr_pj_sn: { pis: 1.2375, cofins: 5.70,  note: 'Lucro Real + PJ Simples Nacional: mesmo crédito presumido do PF → PIS 1,2375% · COFINS 5,70%' },
+  lr_pj_lr: { pis: 1.65,   cofins: 7.60,  note: 'Lucro Real + PJ Lucro Real/Presumido: retenção / crédito sobre alíquotas cheias → PIS 1,65% · COFINS 7,60%' },
+  sn_pf:    { pis: 0,       cofins: 0,     note: 'Simples Nacional: PIS e COFINS recolhidos dentro do DAS — sem apuração separada. Ajuste INSS manualmente se necessário.' },
+  sn_pj_sn: { pis: 0,       cofins: 0,     note: 'Simples Nacional: PIS e COFINS recolhidos dentro do DAS — sem apuração separada.' },
+  sn_pj_lr: { pis: 0,       cofins: 0,     note: 'Simples Nacional: PIS e COFINS recolhidos dentro do DAS — sem apuração separada.' },
+};
+
+function applyTaxProfile() {
+  const motKey = taxMotorista === 'pf' ? 'pf' : taxMotorista === 'pj_sn' ? 'pj_sn' : 'pj_lr';
+  const p = TAX_PROFILES[`${taxEmpRegime}_${motKey}`];
+  document.getElementById('taxPis').value    = p.pis;
+  document.getElementById('taxCofins').value = p.cofins;
+  const noteEl = document.getElementById('taxProfileNote');
+  if (noteEl) noteEl.textContent = p.note;
+  updateMarginCalc();
+}
+
+function setEmpRegime(r) {
+  taxEmpRegime = r;
+  document.getElementById('pillEmpLR').classList.toggle('active', r === 'lr');
+  document.getElementById('pillEmpSN').classList.toggle('active', r === 'sn');
+  applyTaxProfile();
+}
+
+function setMotorista(m) {
+  taxMotorista = m;
+  document.getElementById('pillMotPF').classList.toggle('active',   m === 'pf');
+  document.getElementById('pillMotPJSN').classList.toggle('active', m === 'pj_sn');
+  document.getElementById('pillMotPJLR').classList.toggle('active', m === 'pj_lr');
+  applyTaxProfile();
+}
+
+// Inicializa os campos com o perfil padrão (Lucro Real + PF)
+window.addEventListener('DOMContentLoaded', applyTaxProfile);
 
 function updateEmbarcadoraCalc() {
   const raw = parseFloat((document.getElementById('embarcadoraVal').value || '').replace(',', '.'));
