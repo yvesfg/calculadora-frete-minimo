@@ -3,9 +3,9 @@
   "configurations": [
     {
       "name": "calculadora",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-p", "5500", "."],
-      "port": 5500
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "7823"],
+      "port": 7823
     }
   ]
 }
