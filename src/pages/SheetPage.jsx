@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { RAW, IDX, CARGO_LBL, resolveTable, findRow, calcPiso, fmtBRL, fmtNum } from '../utils/anttData.js';
 import { geocode, calcDistance } from '../utils/geo.js';
+import Icon from '../components/Icon.jsx';
 
 const DEFAULT_AXLES   = 5;
 const DEFAULT_CARGO   = 'carga_geral';
@@ -96,17 +97,33 @@ export default function SheetPage() {
     a.click();
   };
 
+  const downloadTemplate = () => {
+    const header = 'UF_orig;Cidade_orig;UF_dest;Cidade_dest;Distancia_km;Eixos;TipoCarga';
+    const exemplos = [
+      'MA;Imperatriz;PA;Belem;;5;carga_geral',
+      'MA;Acailandia;MA;Sao Luis;;6;granel_solido',
+    ];
+    const blob = new Blob(['﻿' + [header, ...exemplos].join('\r\n')], { type:'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'modelo-cotacao-frete.csv';
+    a.click();
+  };
+
   const totalPiso = rows.reduce((acc, r) => acc + (r.piso || 0), 0);
 
   return (
     <div className="page-content">
       <div className="card">
         <div className="card-head">
-          <div className="card-head-icon">📋</div>
-          <div>
+          <div className="card-head-icon"><Icon name="planilha" stroke="var(--accent)" size={17} /></div>
+          <div style={{ flex:1 }}>
             <div className="card-head-title">Cálculo em Lote</div>
-            <div className="card-head-sub">Cole uma planilha ou arraste um arquivo CSV/TSV</div>
+            <div className="card-head-sub">Baixe o modelo, preencha e suba — ou cole/arraste um CSV/TSV</div>
           </div>
+          <button className="btn btn-ghost" style={{ flexShrink:0, gap:5 }} onClick={downloadTemplate}>
+            <Icon name="download" size={13} /> Baixar modelo
+          </button>
         </div>
         <div className="card-body">
           <div
@@ -144,11 +161,11 @@ export default function SheetPage() {
               onClick={handleProcess}
               disabled={!text.trim() || processing}
             >
-              {processing ? `Calculando… ${progress}%` : '⚡ Calcular'}
+              {processing ? `Calculando… ${progress}%` : (<><Icon name="raio" size={14} /> Calcular</>)}
             </button>
             {rows.length > 0 && (
-              <button className="btn btn-ghost" onClick={exportCSV}>
-                ↓ Exportar CSV
+              <button className="btn btn-ghost" style={{ gap:5 }} onClick={exportCSV}>
+                <Icon name="download" size={13} /> Exportar CSV
               </button>
             )}
           </div>
@@ -158,7 +175,7 @@ export default function SheetPage() {
       {rows.length > 0 && (
         <div className="card">
           <div className="card-head">
-            <div className="card-head-icon">📊</div>
+            <div className="card-head-icon"><Icon name="resultado" stroke="var(--accent)" size={17} /></div>
             <div>
               <div className="card-head-title">Resultados — {rows.length} rotas</div>
               <div className="card-head-sub">Total: {fmtBRL(totalPiso)}</div>

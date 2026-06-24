@@ -394,6 +394,33 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .form-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 .toggles-row { display: flex; gap: 7px; margin-top: 8px; }
 
+/* ── Composição Veicular — layout compacto (esquerda menor, mais espaço p/ tabela) ── */
+.card-body--compact { padding: 12px 14px; }
+.veh-row { display: flex; align-items: flex-end; gap: 10px; }
+.toggles-row--mini { flex: 1; gap: 6px; margin-top: 0; }
+.toggles-row--mini .toggle-card { padding: 6px 8px; }
+.toggles-row--mini .toggle-card-label { font-size: 8.5px; margin-bottom: 3px; }
+.toggles-row--mini .toggle-card-val { font-size: 10px; }
+.toggles-row--mini .pill-switch { width: 24px; height: 13px; }
+.toggles-row--mini .pill-switch::after { width: 9px; height: 9px; }
+.toggles-row--mini .toggle-card.on .pill-switch::after { left: 13px; }
+.veh-field { flex-shrink: 0; min-width: 96px; }
+.veh-select {
+  width: 100%; padding: 8px 10px; border-radius: var(--r);
+  background: var(--surface); border: 1px solid var(--border2); color: var(--text);
+  font-family: var(--font); font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: border-color var(--ease);
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b93a1' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat; background-position: right 9px center; padding-right: 28px;
+}
+.veh-select:hover, .veh-select:focus { border-color: var(--accent); outline: none; }
+.veh-tabela-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+.veh-tabela-pill {
+  padding: 3px 12px; border-radius: 9999px; font-weight: 800; font-size: 12px;
+  background: var(--accent-dim); border: 1px solid var(--accent-ring); color: var(--accent);
+}
+
 /* Footer note */
 .footer-note { font-size: 10px; color: var(--text3); line-height: 1.6; padding: 10px 0 4px; }
 .footer-note a { color: var(--cyan); text-decoration: none; }
@@ -469,4 +496,6 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 }
 @media (max-width: 480px) {
   .toggles-row { flex-wrap: wrap; }
+  .veh-row { flex-direction: column; align-items: stretch; }
+  .veh-field { min-width: 0; }
 }

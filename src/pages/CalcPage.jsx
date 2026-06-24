@@ -5,6 +5,7 @@ import {
 } from '../utils/anttData.js';
 import { geocode, calcDistance } from '../utils/geo.js';
 import CityAutocomplete from '../components/CityAutocomplete.jsx';
+import Icon from '../components/Icon.jsx';
 
 const DEFAULT_INSS = 4.0;
 const DEFAULT_TAX  = 'lr_pf';
@@ -79,7 +80,7 @@ export default function CalcPage() {
           {/* Route card */}
           <div className="card">
             <div className="card-head">
-              <div className="card-head-icon">🗺</div>
+              <div className="card-head-icon"><Icon name="rota" stroke="var(--accent)" size={17} /></div>
               <div>
                 <div className="card-head-title">Rota</div>
                 <div className="card-head-sub">Origem → Destino</div>
@@ -146,54 +147,34 @@ export default function CalcPage() {
           {/* Vehicle card */}
           <div className="card">
             <div className="card-head">
-              <div className="card-head-icon">🚛</div>
+              <div className="card-head-icon"><Icon name="veiculo" stroke="var(--accent)" size={17} /></div>
               <div>
                 <div className="card-head-title">Composição Veicular</div>
                 <div className="card-head-sub">Tipo de operação + eixos</div>
               </div>
             </div>
-            <div className="card-body">
-              <div className="toggles-row" style={{ marginBottom:10 }}>
-                <ToggleCard
-                  label="Alto Desempenho"
-                  sublabel="HP"
-                  value={hp}
-                  onChange={setHp}
-                />
-                <ToggleCard
-                  label="Frete Cont."
-                  sublabel="FC"
-                  value={fc}
-                  onChange={setFc}
-                />
+            <div className="card-body card-body--compact">
+              <div className="veh-row">
+                <div className="toggles-row toggles-row--mini">
+                  <ToggleCard label="Alto Desempenho" sublabel="HP" value={hp} onChange={setHp} />
+                  <ToggleCard label="Frete Cont." sublabel="FC" value={fc} onChange={setFc} />
+                </div>
+                <div className="veh-field">
+                  <label className="field-label">Eixos</label>
+                  <select
+                    className="veh-select"
+                    value={axleOptions.includes(axles) ? axles : ''}
+                    onChange={e => setAxles(parseInt(e.target.value))}
+                  >
+                    {axleOptions.map(n => (
+                      <option key={n} value={n}>{n} eixos</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-                <span className="field-label" style={{ marginBottom:0, whiteSpace:'nowrap' }}>Tabela:</span>
-                <span style={{
-                  padding:'3px 12px', borderRadius:9999, fontWeight:800, fontSize:12,
-                  background:'var(--accent-dim)', border:'1px solid var(--accent-ring)', color:'var(--accent)',
-                }}>Tabela {tbl}</span>
-              </div>
-              <label className="field-label">Eixos</label>
-              <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                {[2,3,4,5,6,7,9].map(n => {
-                  const avail = axleOptions.includes(n);
-                  return (
-                    <button
-                      key={n}
-                      disabled={!avail}
-                      onClick={() => avail && setAxles(n)}
-                      style={{
-                        width:36, height:36, borderRadius:'var(--r)',
-                        border: axles === n ? '2px solid var(--accent)' : '1px solid var(--border2)',
-                        background: axles === n ? 'var(--accent-dim)' : avail ? 'var(--surface)' : 'transparent',
-                        color: axles === n ? 'var(--accent)' : avail ? 'var(--text2)' : 'var(--border2)',
-                        fontWeight:700, fontSize:12, cursor: avail ? 'pointer' : 'default',
-                        fontFamily:'var(--font)',
-                      }}
-                    >{n}</button>
-                  );
-                })}
+              <div className="veh-tabela-row">
+                <span className="field-label" style={{ marginBottom:0 }}>Tabela aplicada</span>
+                <span className="veh-tabela-pill">Tabela {tbl}</span>
               </div>
             </div>
           </div>
@@ -201,29 +182,26 @@ export default function CalcPage() {
           {/* Cargo card */}
           <div className="card">
             <div className="card-head">
-              <div className="card-head-icon">📦</div>
+              <div className="card-head-icon"><Icon name="carga" stroke="var(--accent)" size={17} /></div>
               <div>
                 <div className="card-head-title">Tipo de Carga</div>
                 <div className="card-head-sub">Categoria conforme ANTT</div>
               </div>
             </div>
-            <div className="card-body">
-              {CARGO_SECS.map(sec => (
-                <div key={sec.label} style={{ marginBottom:10 }}>
-                  <div style={{ fontSize:9, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:5 }}>
-                    {sec.label}
-                  </div>
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
+            <div className="card-body card-body--compact">
+              <select
+                className="veh-select"
+                value={cargo}
+                onChange={e => setCargo(e.target.value)}
+              >
+                {CARGO_SECS.map(sec => (
+                  <optgroup key={sec.label} label={sec.label}>
                     {sec.types.map(t => (
-                      <button
-                        key={t}
-                        onClick={() => setCargo(t)}
-                        className={`tax-pill${cargo === t ? ' active' : ''}`}
-                      >{CARGO_LBL[t]}</button>
+                      <option key={t} value={t}>{CARGO_LBL[t]}</option>
                     ))}
-                  </div>
-                </div>
-              ))}
+                  </optgroup>
+                ))}
+              </select>
             </div>
           </div>
         </div>
