@@ -7,9 +7,10 @@ export default function TablePage() {
   const [tbl, setTbl]     = useState('A');
   const [cargo, setCargo] = useState('carga_geral');
   const [hl, setHl]       = useState(null); // highlight axles
+  const [axleFilter, setAxleFilter] = useState(null); // null = todos
 
   const rows = RAW.filter(r => r[IDX.TBL] === tbl && r[IDX.CARGO] === cargo);
-  const axles = TBL_AXLES[tbl] || [];
+  const axles = (TBL_AXLES[tbl] || []).filter(a => axleFilter === null || a === axleFilter);
 
   const allCargos = CARGO_SECS.flatMap(s => s.types);
 
@@ -18,12 +19,28 @@ export default function TablePage() {
       {/* Table selector */}
       <div className="tbl-tabs">
         {TABLES.map(t => (
-          <button key={t} className={`tbl-tab${tbl===t?' active':''}`} onClick={() => setTbl(t)}>
+          <button key={t} className={`tbl-tab${tbl===t?' active':''}`} onClick={() => { setTbl(t); setAxleFilter(null); }}>
             Tabela {t}
           </button>
         ))}
       </div>
       <p className="tbl-desc">{TBL_DESCS[tbl]}</p>
+
+      {/* Axle filter */}
+      <div style={{ marginBottom:10, display:'flex', flexWrap:'wrap', gap:5, alignItems:'center' }}>
+        <span style={{ fontSize:9, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'.06em' }}>Eixos:</span>
+        <button
+          className={`tax-pill${axleFilter === null ? ' active' : ''}`}
+          onClick={() => setAxleFilter(null)}
+        >Todos</button>
+        {(TBL_AXLES[tbl] || []).map(a => (
+          <button
+            key={a}
+            className={`tax-pill${axleFilter === a ? ' active' : ''}`}
+            onClick={() => setAxleFilter(axleFilter === a ? null : a)}
+          >{a} eixos</button>
+        ))}
+      </div>
 
       {/* Cargo selector */}
       <div style={{ marginBottom:12, display:'flex', flexWrap:'wrap', gap:5 }}>
@@ -102,7 +119,7 @@ export default function TablePage() {
 
       <div className="footer-note" style={{ marginTop:12 }}>
         Valores em R$/km (CCD) e R$ fixo (CC). Clicar em um eixo destaca a coluna.
-        Res. ANTT 6.442/2021 · vigor jan/2022.
+        Res. ANTT 6.076/2026 + Portaria SUROC 4/2026 · vigor mar/2026.
       </div>
     </div>
   );

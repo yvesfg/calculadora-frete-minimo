@@ -22,7 +22,7 @@ export default function CalcPage() {
   const [geoErr, setGeoErr]         = useState('');
 
   const [hp, setHp]       = useState(false);
-  const [fc, setFc]       = useState(false);
+  const [fc, setFc]       = useState(true); // padrão: composição veicular → Tabela A
   const [axles, setAxles] = useState(5);
   const [cargo, setCargo] = useState('carga_geral');
 
@@ -156,8 +156,8 @@ export default function CalcPage() {
             <div className="card-body card-body--compact">
               <div className="veh-row">
                 <div className="toggles-row toggles-row--mini">
-                  <ToggleCard label="Alto Desempenho" sublabel="HP" value={hp} onChange={setHp} />
-                  <ToggleCard label="Frete Cont." sublabel="FC" value={fc} onChange={setFc} />
+                  <ToggleCard label="Composição Veicular" sublabel="Tab.A/C" value={fc} onChange={setFc} />
+                  <ToggleCard label="Alto Desempenho" sublabel="Tab.C/D" value={hp} onChange={setHp} />
                 </div>
                 <div className="veh-field">
                   <label className="field-label">Eixos</label>
@@ -371,7 +371,7 @@ export default function CalcPage() {
       </div>
 
       <div className="footer-note">
-        Dados conforme <strong>Resolução ANTT nº 6.442/2021</strong>. Distâncias via OSRM + OpenStreetMap.
+        Dados conforme <strong>Res. ANTT 6.076/2026 + Portaria SUROC 4/2026</strong> (mar/2026). Distâncias via OSRM + OpenStreetMap.
         Cidades via IBGE. Esta calculadora é uma ferramenta de apoio — confirme valores oficiais em &nbsp;
         <a href="https://www.antt.gov.br" target="_blank" rel="noreferrer">antt.gov.br</a>.
       </div>

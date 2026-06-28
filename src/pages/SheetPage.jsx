@@ -21,18 +21,67 @@ function parseSheet(text) {
       axles:    parseInt(cols[5])   || DEFAULT_AXLES,
       cargo:    cols[6]             || DEFAULT_CARGO,
     };
-  }).filter(r => r.uf_orig && r.city_orig && r.uf_dest && r.city_dest);
+  // UF sempre 2 letras — descarta cabeçalho e linhas inválidas automaticamente.
+  }).filter(r => /^[A-Za-z]{2}$/.test(r.uf_orig) && r.city_orig && /^[A-Za-z]{2}$/.test(r.uf_dest) && r.city_dest);
+}
+
+// Converte as linhas extraídas pela IA / Excel no mesmo CSV que o textarea entende.
+function rowsToText(rows) {
+  return rows.map(r => [
+    r.uf_orig, r.city_orig, r.uf_dest, r.city_dest,
+    r.dist_km || '', r.axles || '', r.cargo || '',
+  ].join(';')).join('\n');
+}
+
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+// Reduz a foto antes de mandar pra IA — payload menor, leitura igual.
+function downscaleImage(dataUrl, maxPx = 1600, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * s);
+      c.height = Math.round(img.height * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => reject(new Error('Não foi possível ler a imagem'));
+    img.src = dataUrl;
+  });
+}
+
+function ToggleCard({ label, sublabel, value, onChange }) {
+  return (
+    <div className={`toggle-card${value ? ' on' : ''}`} onClick={() => onChange(!value)}>
+      <span className="toggle-card-label">{label}</span>
+      <div className="toggle-card-row">
+        <div className="pill-switch" />
+        <span className="toggle-card-val">{sublabel}: {value ? 'SIM' : 'NÃO'}</span>
+      </div>
+    </div>
+  );
 }
 
 export default function SheetPage() {
   const [text, setText]       = useState('');
   const [rows, setRows]       = useState([]);
   const [hp, setHp]           = useState(DEFAULT_HP);
-  const [fc, setFc]           = useState(DEFAULT_FC);
+  const [fc, setFc]           = useState(true); // padrão: composição veicular → Tabela A
   const [processing, setProc] = useState(false);
   const [progress, setProgress] = useState(0);
   const [dragOver, setDragOver] = useState(false);
+  const [intake, setIntake]   = useState(null); // { type:'load'|'ok'|'err', msg }
   const textRef = useRef(null);
+  const fileRef = useRef(null);
 
   const processRows = async (parsed) => {
     setProc(true); setProgress(0);
@@ -71,13 +120,73 @@ export default function SheetPage() {
     processRows(parsed);
   };
 
+  // ── Roteia o arquivo conforme o tipo ──────────────────────
+  const handleFile = async (file) => {
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setIntake({ type: 'err', msg: 'Arquivo muito grande — máx. 10 MB' });
+      return;
+    }
+    const name = file.name.toLowerCase();
+    const isImg = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf' || name.endsWith('.pdf');
+    const isXlsx = /\.(xlsx|xls)$/.test(name);
+
+    if (isImg || isPdf) return intakeIA(file, isPdf);
+    if (isXlsx)         return readXlsx(file);
+    // CSV / TSV / TXT — vai direto pro campo.
+    const reader = new FileReader();
+    reader.onload = ev => { setText(ev.target.result); setIntake(null); };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  // Intake IA — foto/print/PDF de cotação → linhas estruturadas via gateway.
+  const intakeIA = async (file, isPdf) => {
+    setIntake({ type: 'load', msg: 'IA lendo a cotação…' });
+    try {
+      const dataUrl = await toBase64(file);
+      const image = isPdf ? dataUrl : await downscaleImage(dataUrl);
+      const r = await fetch('/api/ai-extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile: 'cotacao', image }),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(j.error || `HTTP ${r.status}`);
+      }
+      const data = await r.json();
+      const extracted = Array.isArray(data.rows) ? data.rows : [];
+      if (!extracted.length) throw new Error('Nenhuma rota reconhecida no documento');
+      setText(rowsToText(extracted));
+      setIntake({ type: 'ok', msg: `✨ IA extraiu ${extracted.length} rota(s) — confira e clique Calcular` });
+    } catch (e) {
+      setIntake({ type: 'err', msg: 'IA: ' + e.message });
+    }
+  };
+
+  // Excel — converte a 1ª aba em CSV (import dinâmico, fora do bundle principal).
+  const readXlsx = async (file) => {
+    setIntake({ type: 'load', msg: 'Lendo planilha…' });
+    try {
+      const XLSX = await import('xlsx');
+      const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      setText(XLSX.utils.sheet_to_csv(ws, { FS: ';' }));
+      setIntake({ type: 'ok', msg: 'Planilha carregada — confira e clique Calcular' });
+    } catch (e) {
+      setIntake({ type: 'err', msg: 'Planilha: ' + e.message });
+    }
+  };
+
   const handleDrop = (e) => {
     e.preventDefault(); setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => setText(ev.target.result);
-    reader.readAsText(file, 'UTF-8');
+    handleFile(e.dataTransfer.files[0]);
+  };
+
+  const handlePick = (e) => {
+    handleFile(e.target.files?.[0]);
+    e.target.value = '';
   };
 
   const exportCSV = () => {
@@ -112,6 +221,9 @@ export default function SheetPage() {
 
   const totalPiso = rows.reduce((acc, r) => acc + (r.piso || 0), 0);
 
+  const intakeColor = intake?.type === 'err' ? 'var(--red)'
+    : intake?.type === 'ok' ? 'var(--accent)' : 'var(--text3)';
+
   return (
     <div className="page-content">
       <div className="card">
@@ -119,11 +231,23 @@ export default function SheetPage() {
           <div className="card-head-icon"><Icon name="planilha" stroke="var(--accent)" size={17} /></div>
           <div style={{ flex:1 }}>
             <div className="card-head-title">Cálculo em Lote</div>
-            <div className="card-head-sub">Baixe o modelo, preencha e suba — ou cole/arraste um CSV/TSV</div>
+            <div className="card-head-sub">Suba uma cotação (foto, PDF, Excel ou CSV) — a IA extrai as rotas — ou cole/arraste</div>
           </div>
-          <button className="btn btn-ghost" style={{ flexShrink:0, gap:5 }} onClick={downloadTemplate}>
-            <Icon name="download" size={13} /> Baixar modelo
-          </button>
+          <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv,.tsv,.txt,.xlsx,.xls,image/*,application/pdf"
+              style={{ display:'none' }}
+              onChange={handlePick}
+            />
+            <button className="btn btn-ghost" style={{ gap:5 }} onClick={() => fileRef.current?.click()}>
+              <Icon name="upload" size={13} /> Enviar arquivo
+            </button>
+            <button className="btn btn-ghost" style={{ gap:5 }} onClick={downloadTemplate}>
+              <Icon name="download" size={13} /> Baixar modelo
+            </button>
+          </div>
         </div>
         <div className="card-body">
           <div
@@ -136,25 +260,28 @@ export default function SheetPage() {
             <textarea
               ref={textRef}
               value={text}
-              onChange={e => setText(e.target.value)}
+              onChange={e => { setText(e.target.value); if (intake) setIntake(null); }}
               style={{
                 width:'100%', minHeight:120, background:'transparent', border:'none',
                 color:'var(--text)', fontFamily:'var(--font)', fontSize:12,
                 resize:'vertical', outline:'none',
               }}
-              placeholder={`Cole aqui ou arraste um arquivo…\n\nColunas: UF_orig  Cidade_orig  UF_dest  Cidade_dest  Distância(km)*  Eixos*  TipoCarga*\n* opcionais — distância calculada via OSRM se omitida`}
+              placeholder={`Arraste um arquivo aqui (foto, PDF, Excel ou CSV), cole o conteúdo, ou clique em "Enviar arquivo".\n\nColunas: UF_orig  Cidade_orig  UF_dest  Cidade_dest  Distância(km)*  Eixos*  TipoCarga*\n* opcionais — distância calculada via OSRM se omitida`}
             />
           </div>
 
+          {intake && (
+            <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:8, fontSize:11, color:intakeColor }}>
+              {intake.type === 'load' && <Icon name="ia" size={13} stroke={intakeColor} />}
+              {intake.msg}
+            </div>
+          )}
+
           <div style={{ display:'flex', gap:8, marginTop:10, flexWrap:'wrap', alignItems:'center' }}>
-            <label style={{ fontSize:11, color:'var(--text3)', display:'flex', alignItems:'center', gap:4 }}>
-              <input type="checkbox" checked={hp} onChange={e => setHp(e.target.checked)} />
-              Alto Desempenho (HP)
-            </label>
-            <label style={{ fontSize:11, color:'var(--text3)', display:'flex', alignItems:'center', gap:4 }}>
-              <input type="checkbox" checked={fc} onChange={e => setFc(e.target.checked)} />
-              Frete Contratado (FC)
-            </label>
+            <div className="toggles-row toggles-row--mini">
+              <ToggleCard label="Composição Veicular" sublabel="Tab.A/C" value={fc} onChange={setFc} />
+              <ToggleCard label="Alto Desempenho" sublabel="Tab.C/D" value={hp} onChange={setHp} />
+            </div>
             <button
               className="btn btn-primary"
               style={{ marginLeft:'auto', width:'auto', padding:'8px 20px' }}
@@ -228,8 +355,9 @@ export default function SheetPage() {
       )}
 
       <div className="footer-note">
-        Formato: colunas separadas por tab, ponto-e-vírgula ou vírgula. Cabeçalho opcional (ignorado se não-numérico).
-        Distância calculada automaticamente via OSRM quando omitida. Eixos padrão: {DEFAULT_AXLES}. Carga padrão: {CARGO_LBL[DEFAULT_CARGO]}.
+        Formato: colunas separadas por tab, ponto-e-vírgula ou vírgula. Cabeçalho opcional (ignorado automaticamente).
+        Fotos, prints e PDFs de cotação são lidos por IA; Excel é convertido para linhas.
+        Distância calculada via OSRM quando omitida. Eixos padrão: {DEFAULT_AXLES}. Carga padrão: {CARGO_LBL[DEFAULT_CARGO]}.
       </div>
     </div>
   );
