@@ -313,6 +313,18 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
   text-align: center; font-weight: 600;
 }
 
+/* Retorno vazio toggle */
+.margin-retorno-row {
+  display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+  border-top: 1px solid var(--border); cursor: pointer;
+  font-size: 11px; color: var(--text2); transition: color var(--ease);
+}
+.margin-retorno-row:hover { color: var(--text); }
+.margin-retorno-row.on { color: var(--accent); }
+.margin-retorno-row.on .pill-switch { background: var(--accent); }
+.margin-retorno-row.on .pill-switch::after { left: 15px; background: #0b0e11; }
+.margin-retorno-hint { margin-left: auto; font-size: 10px; color: var(--text3); }
+
 /* Embarcadora */
 .embarcadora-panel {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);

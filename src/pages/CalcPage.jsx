@@ -26,10 +26,12 @@ export default function CalcPage() {
   const [fc, setFc]       = useState(true); // padrão: composição veicular → Tabela A
   const [axles, setAxles] = useState(5);
   const [cargo, setCargo] = useState('carga_geral');
+  const [pesoTon, setPesoTon] = useState('');
 
   const [margin, setMargin]     = useState(DEFAULT_MARGIN);
   const [taxProfile, setTax]    = useState(DEFAULT_TAX);
   const [inss, setInss]         = useState(DEFAULT_INSS);
+  const [retornoVazio, setRetornoVazio] = useState(false);
   const [showEmb, setShowEmb]   = useState(false);
   const [embPrice, setEmbPrice] = useState('');
 
@@ -38,16 +40,24 @@ export default function CalcPage() {
   const row  = findRow(tbl, cargo, axles);
   const piso = calcPiso(row, km);
 
+  const peso = parseFloat(String(pesoTon).replace(',', '.')) || 0;
+  const pisoPorTon = piso && peso > 0 ? piso / peso : null;
+
   const tp   = TAX_PROFILES[taxProfile];
   const totalTax = (tp?.pis || 0) + (tp?.cofins || 0) + inss / 100;
 
-  // Scenario 1: markup over piso
-  const price1 = piso ? piso * (1 + margin / 100) : null;
-  // Scenario 2: real margin (gross)
-  const price2 = piso ? piso / (1 - totalTax - margin / 100) : null;
+  // Base de custeio p/ simulação de margem: opcionalmente considera o retorno vazio
+  // (o transportador precisa cobrir o custo do trecho de volta sem carga)
+  const pisoRetorno = row ? calcPiso(row, km * 2) : null;
+  const costBasis = retornoVazio ? pisoRetorno : piso;
 
-  const net1 = price1 && piso ? price1 - piso : null;
-  const net2 = price2 && piso ? price2 * (1 - totalTax) - piso : null;
+  // Scenario 1: markup over piso
+  const price1 = costBasis ? costBasis * (1 + margin / 100) : null;
+  // Scenario 2: real margin (gross)
+  const price2 = costBasis ? costBasis / (1 - totalTax - margin / 100) : null;
+
+  const net1 = price1 && costBasis ? price1 - costBasis : null;
+  const net2 = price2 && costBasis ? price2 * (1 - totalTax) - costBasis : null;
 
   const emb = parseFloat(String(embPrice).replace(',','.')) || 0;
   const embVsP1 = price1 && emb ? emb - price1 : null;
@@ -206,6 +216,19 @@ export default function CalcPage() {
                   </optgroup>
                 ))}
               </select>
+              <div style={{ marginTop:10 }}>
+                <label className="field-label">Peso da carga (opcional)</label>
+                <div className="dist-badge" style={{ marginTop:0 }}>
+                  <span style={{ fontSize:12 }}>⚖️</span>
+                  <input
+                    value={pesoTon}
+                    onChange={e => setPesoTon(e.target.value)}
+                    style={{ width:80, textAlign:'center', fontWeight:700, color:'var(--accent)' }}
+                    placeholder="0"
+                  />
+                  <span style={{ color:'var(--text3)' }}>toneladas</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -248,10 +271,19 @@ export default function CalcPage() {
                     <span className="result-row-label">📦 {CARGO_LBL[cargo]}</span>
                     <span className="result-row-val">{axles} eixos</span>
                   </div>
+                  {pisoPorTon != null && (
+                    <div className="result-row">
+                      <span className="result-row-label">⚖️ Peso informado</span>
+                      <span className="result-row-val">{fmtNum(peso, 1)} ton · R$ {fmtNum(pisoPorTon, 2)}/ton</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="result-note">
                   Piso = CCD × distância + CC &nbsp;·&nbsp; Res. ANTT 6.442/2021
+                </div>
+                <div className="result-note" style={{ paddingTop:0 }}>
+                  🛣️ Pedágio não incluso no piso — deve ser pago à parte, conforme legislação.
                 </div>
 
                 {/* Margin calc */}
@@ -286,23 +318,34 @@ export default function CalcPage() {
                     </div>
                   </div>
 
+                  <div
+                    className={`margin-retorno-row${retornoVazio ? ' on' : ''}`}
+                    onClick={() => setRetornoVazio(v => !v)}
+                  >
+                    <div className="pill-switch" />
+                    <span>Considerar retorno vazio (ida + volta)</span>
+                    {retornoVazio && km > 0 && (
+                      <span className="margin-retorno-hint">{fmtNum(km * 2, 0)} km considerados</span>
+                    )}
+                  </div>
+
                   <div style={{ padding:'10px 14px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                     <ScenarioCard
                       title="Markup s/ Piso"
-                      subtitle={`Piso × (1 + ${margin}%)`}
+                      subtitle={`${retornoVazio ? 'Custeio (ida+volta)' : 'Piso'} × (1 + ${margin}%)`}
                       price={price1}
                       net={net1}
-                      piso={piso}
+                      basis={costBasis}
                       totalTax={totalTax}
                       inss={inss}
                       tp={tp}
                     />
                     <ScenarioCard
                       title="Margem Real"
-                      subtitle={`Piso ÷ (1 − imp − ${margin}%)`}
+                      subtitle={`${retornoVazio ? 'Custeio (ida+volta)' : 'Piso'} ÷ (1 − imp − ${margin}%)`}
                       price={price2}
                       net={net2}
-                      piso={piso}
+                      basis={costBasis}
                       totalTax={totalTax}
                       inss={inss}
                       tp={tp}
@@ -395,7 +438,7 @@ function ToggleCard({ label, sublabel, value, onChange }) {
   );
 }
 
-function ScenarioCard({ title, subtitle, price, net, piso, totalTax, inss, tp }) {
+function ScenarioCard({ title, subtitle, price, net, basis, totalTax, inss, tp }) {
   return (
     <div className="margin-scenario">
       <div className="margin-scenario-head">
@@ -422,9 +465,9 @@ function ScenarioCard({ title, subtitle, price, net, piso, totalTax, inss, tp })
         <span className="margin-net-label">Líquido</span>
         <span className="margin-net-val" style={{ color: net >= 0 ? 'var(--green)' : 'var(--red)' }}>
           {fmtBRL(net)}
-          {piso && net != null ? (
+          {basis && net != null ? (
             <span className="margin-net-pct" style={{ color:'var(--text3)' }}>
-              ({fmtNum(net / piso * 100)}%)
+              ({fmtNum(net / basis * 100)}%)
             </span>
           ) : null}
         </span>
