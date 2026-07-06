@@ -393,7 +393,6 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 
 /* ── Composição Veicular — layout compacto (esquerda menor, mais espaço p/ tabela) ── */
 .card-body--compact { padding: 12px 14px; }
-.veh-row { display: flex; align-items: flex-end; gap: 10px; }
 .toggles-row--mini { flex: 1; gap: 6px; margin-top: 0; }
 .toggles-row--mini .toggle-card { padding: 6px 8px; }
 .toggles-row--mini .toggle-card-label { font-size: 8.5px; margin-bottom: 3px; }
@@ -401,7 +400,17 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .toggles-row--mini .pill-switch { width: 24px; height: 13px; }
 .toggles-row--mini .pill-switch::after { width: 9px; height: 9px; }
 .toggles-row--mini .toggle-card.on .pill-switch::after { left: 13px; }
-.veh-field { flex-shrink: 0; min-width: 96px; }
+.select-card {
+  flex: 1; min-width: 96px; border: 1px solid var(--border); border-radius: var(--r);
+  padding: 9px 11px; background: var(--surface);
+}
+.select-card .field-label { margin-bottom: 5px; }
+.select-card .veh-select {
+  border: none; background-color: transparent; padding: 0 20px 0 0; width: auto;
+}
+.toggles-row--mini .select-card { padding: 6px 8px; }
+.toggles-row--mini .select-card .field-label { font-size: 8.5px; margin-bottom: 3px; }
+.toggles-row--mini .select-card .veh-select { font-size: 10px; }
 .veh-select {
   width: 100%; padding: 8px 10px; border-radius: var(--r);
   background: var(--surface); border: 1px solid var(--border2); color: var(--text);
@@ -423,14 +432,17 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .footer-note a { color: var(--cyan); text-decoration: none; }
 .footer-note a:hover { text-decoration: underline; }
 
-/* Tbl tabs */
-.tbl-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-.tbl-tab  {
-  padding: 5px 13px; border-radius: 9999px; font-size: 11px; font-weight: 700;
-  border: 1px solid var(--border2); background: transparent; color: var(--text3);
-  cursor: pointer; font-family: var(--font); transition: all var(--ease);
+/* Tbl selector */
+.tbl-selector-row { display: flex; align-items: stretch; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.tbl-select-card { flex: 0 0 auto; min-width: 140px; }
+.tbl-update-check {
+  flex: 1; min-width: 220px; display: flex; flex-direction: column; justify-content: center;
+  gap: 2px; border: 1px solid var(--border); border-radius: var(--r);
+  padding: 9px 11px; background: var(--surface); text-decoration: none;
+  font-size: 11px; font-weight: 600; color: var(--text2); transition: border-color var(--ease);
 }
-.tbl-tab.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+.tbl-update-check:hover { border-color: var(--accent); color: var(--accent); }
+.tbl-update-check-sub { font-size: 9px; font-weight: 500; color: var(--text3); }
 .tbl-desc { font-size: 11px; color: var(--text2); margin-bottom: 10px; line-height: 1.5; }
 .tbl-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--r-lg); max-height: calc(100vh - 220px); }
 
@@ -493,6 +505,5 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 }
 @media (max-width: 480px) {
   .toggles-row { flex-wrap: wrap; }
-  .veh-row { flex-direction: column; align-items: stretch; }
-  .veh-field { min-width: 0; }
+  .select-card { min-width: 0; }
 }

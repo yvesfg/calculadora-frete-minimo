@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { fetchStates, fetchCities } from '../utils/geo.js';
 
-export default function CityAutocomplete({ label, value, onChange }) {
+function CityAutocomplete({ label, value, onChange, onCityDone }, ref) {
   const [states, setStates]       = useState([]);
   const [cities, setCities]       = useState([]);
   const [query, setQuery]         = useState(value?.city || '');
@@ -9,8 +9,13 @@ export default function CityAutocomplete({ label, value, onChange }) {
   const [suggestions, setSug]     = useState([]);
   const [open, setOpen]           = useState(false);
   const [focused, setFocused]     = useState(0);
+  const ufRef    = useRef(null);
   const inputRef = useRef(null);
   const dropRef  = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    focusUf: () => ufRef.current?.focus(),
+  }));
 
   useEffect(() => { fetchStates().then(setStates); }, []);
   useEffect(() => {
@@ -33,6 +38,7 @@ export default function CityAutocomplete({ label, value, onChange }) {
     setQuery(c.nome);
     setOpen(false);
     onChange({ uf, city: c.nome });
+    onCityDone?.();
   };
 
   const handleKeyDown = (e) => {
@@ -47,7 +53,17 @@ export default function CityAutocomplete({ label, value, onChange }) {
     <div>
       <label className="field-label">{label}</label>
       <div style={{ display:'grid', gridTemplateColumns:'80px 1fr', gap:6 }}>
-        <select value={uf} onChange={e => { setUf(e.target.value); setQuery(''); onChange({ uf: e.target.value, city:'' }); }}>
+        <select
+          ref={ufRef}
+          value={uf}
+          onChange={e => {
+            const nextUf = e.target.value;
+            setUf(nextUf);
+            setQuery('');
+            onChange({ uf: nextUf, city:'' });
+            if (nextUf) setTimeout(() => inputRef.current?.focus(), 0);
+          }}
+        >
           <option value="">UF</option>
           {states.map(s => <option key={s.sigla} value={s.sigla}>{s.sigla}</option>)}
         </select>
@@ -67,7 +83,7 @@ export default function CityAutocomplete({ label, value, onChange }) {
                 <div
                   key={c.id}
                   className={`ac-item${i === focused ? ' focused' : ''}`}
-                  onMouseDown={() => selectCity(c)}
+                  onMouseDown={e => { e.preventDefault(); selectCity(c); }}
                 >
                   <div>
                     <div className="ac-main">{c.nome}</div>
@@ -82,3 +98,5 @@ export default function CityAutocomplete({ label, value, onChange }) {
     </div>
   );
 }
+
+export default forwardRef(CityAutocomplete);

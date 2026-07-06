@@ -186,6 +186,13 @@ export const TBL_DESCS = {
   D:'Somente unidade de tração. Operação de alto desempenho. Eixos: 2–6.',
 };
 
+export const ANTT_SOURCE = {
+  resolucao: 'Res. ANTT 6.076/2026',
+  portaria:  'Portaria SUROC 4/2026',
+  vigor:     'mar/2026',
+  url:       'https://www.antt.gov.br',
+};
+
 export const TAX_PROFILES = {
   lr_pf:   { label:'LR PF',    pis:0.012375, cofins:0.057  },
   lr_pj_sn:{ label:'LR PJ SN', pis:0.012375, cofins:0.057  },

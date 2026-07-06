@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   RAW, IDX, CARGO_LBL, CARGO_SECS, TBL_AXLES, TAX_PROFILES,
   resolveTable, findRow, calcPiso, fmtBRL, fmtNum,
@@ -20,6 +20,7 @@ export default function CalcPage() {
   const [manualDist, setManualDist] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoErr, setGeoErr]         = useState('');
+  const destRef = useRef(null);
 
   const [hp, setHp]       = useState(false);
   const [fc, setFc]       = useState(true); // padrão: composição veicular → Tabela A
@@ -92,13 +93,18 @@ export default function CalcPage() {
                 <div style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:10 }}>
                   <div className="route-dot origin" />
                   <div style={{ flex:1 }}>
-                    <CityAutocomplete label="Origem" value={orig} onChange={setOrig} />
+                    <CityAutocomplete
+                      label="Origem"
+                      value={orig}
+                      onChange={setOrig}
+                      onCityDone={() => destRef.current?.focusUf()}
+                    />
                   </div>
                 </div>
                 <div style={{ display:'flex', alignItems:'flex-start', gap:8 }}>
                   <div className="route-dot dest" />
                   <div style={{ flex:1 }}>
-                    <CityAutocomplete label="Destino" value={dest} onChange={setDest} />
+                    <CityAutocomplete ref={destRef} label="Destino" value={dest} onChange={setDest} />
                   </div>
                 </div>
               </div>
@@ -154,12 +160,10 @@ export default function CalcPage() {
               </div>
             </div>
             <div className="card-body card-body--compact">
-              <div className="veh-row">
-                <div className="toggles-row toggles-row--mini">
-                  <ToggleCard label="Composição Veicular" sublabel="Tab.A/C" value={fc} onChange={setFc} />
-                  <ToggleCard label="Alto Desempenho" sublabel="Tab.C/D" value={hp} onChange={setHp} />
-                </div>
-                <div className="veh-field">
+              <div className="toggles-row toggles-row--mini">
+                <ToggleCard label="Composição Veicular" sublabel="Tab.A/C" value={fc} onChange={setFc} />
+                <ToggleCard label="Alto Desempenho" sublabel="Tab.C/D" value={hp} onChange={setHp} />
+                <div className="select-card">
                   <label className="field-label">Eixos</label>
                   <select
                     className="veh-select"

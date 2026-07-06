@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RAW, IDX, CARGO_LBL, CARGO_SECS, TBL_AXLES, TBL_DESCS, fmtNum } from '../utils/anttData.js';
+import { RAW, IDX, CARGO_LBL, CARGO_SECS, TBL_AXLES, TBL_DESCS, ANTT_SOURCE, fmtNum } from '../utils/anttData.js';
 
 const TABLES = ['A','B','C','D'];
 
@@ -17,12 +17,29 @@ export default function TablePage() {
   return (
     <div className="page-content">
       {/* Table selector */}
-      <div className="tbl-tabs">
-        {TABLES.map(t => (
-          <button key={t} className={`tbl-tab${tbl===t?' active':''}`} onClick={() => { setTbl(t); setAxleFilter(null); }}>
-            Tabela {t}
-          </button>
-        ))}
+      <div className="tbl-selector-row">
+        <div className="select-card tbl-select-card">
+          <label className="field-label">Tabela ANTT</label>
+          <select
+            className="veh-select"
+            value={tbl}
+            onChange={e => { setTbl(e.target.value); setAxleFilter(null); }}
+          >
+            {TABLES.map(t => (
+              <option key={t} value={t}>Tabela {t}</option>
+            ))}
+          </select>
+        </div>
+        <a
+          className="tbl-update-check"
+          href={ANTT_SOURCE.url}
+          target="_blank"
+          rel="noreferrer"
+          title={`Base atual: ${ANTT_SOURCE.resolucao} + ${ANTT_SOURCE.portaria} (vigor ${ANTT_SOURCE.vigor})`}
+        >
+          <span>🔎 Verificar atualização na portaria oficial</span>
+          <span className="tbl-update-check-sub">Base: {ANTT_SOURCE.resolucao} · vigor {ANTT_SOURCE.vigor}</span>
+        </a>
       </div>
       <p className="tbl-desc">{TBL_DESCS[tbl]}</p>
 
