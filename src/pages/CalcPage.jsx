@@ -6,6 +6,7 @@ import {
 import { geocode, calcDistance } from '../utils/geo.js';
 import CityAutocomplete from '../components/CityAutocomplete.jsx';
 import Icon from '../components/Icon.jsx';
+import Dropdown from '../components/Dropdown.jsx';
 
 const DEFAULT_INSS = 4.0;
 const DEFAULT_TAX  = 'lr_pf';
@@ -175,15 +176,11 @@ export default function CalcPage() {
                 <ToggleCard label="Alto Desempenho" sublabel="Tab.C/D" value={hp} onChange={setHp} />
                 <div className="select-card">
                   <label className="field-label">Eixos</label>
-                  <select
-                    className="veh-select"
-                    value={axleOptions.includes(axles) ? axles : ''}
-                    onChange={e => setAxles(parseInt(e.target.value))}
-                  >
-                    {axleOptions.map(n => (
-                      <option key={n} value={n}>{n} eixos</option>
-                    ))}
-                  </select>
+                  <Dropdown
+                    value={axles}
+                    onChange={setAxles}
+                    options={axleOptions.map(n => ({ value: n, label: `${n} eixos` }))}
+                  />
                 </div>
               </div>
               <div className="veh-tabela-row">
@@ -203,19 +200,14 @@ export default function CalcPage() {
               </div>
             </div>
             <div className="card-body card-body--compact">
-              <select
-                className="veh-select"
+              <Dropdown
                 value={cargo}
-                onChange={e => setCargo(e.target.value)}
-              >
-                {CARGO_SECS.map(sec => (
-                  <optgroup key={sec.label} label={sec.label}>
-                    {sec.types.map(t => (
-                      <option key={t} value={t}>{CARGO_LBL[t]}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+                onChange={setCargo}
+                groups={CARGO_SECS.map(sec => ({
+                  label: sec.label,
+                  options: sec.types.map(t => ({ value: t, label: CARGO_LBL[t] })),
+                }))}
+              />
               <div style={{ marginTop:10 }}>
                 <label className="field-label">Peso da carga (opcional)</label>
                 <div className="dist-badge" style={{ marginTop:0 }}>

@@ -433,6 +433,33 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
   background-repeat: no-repeat; background-position: right 9px center; padding-right: 28px;
 }
 .veh-select:hover, .veh-select:focus { border-color: var(--accent); outline: none; }
+
+/* Dropdown custom — substitui <select> nativo (popup de <option> ignora tema escuro) */
+.dd-root { position: relative; }
+.dd-trigger {
+  display: flex; align-items: center; text-align: left;
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  font: inherit; outline: none;
+}
+.dd-trigger-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-panel {
+  /* top/left/width calculados em JS (Dropdown.jsx) — painel é montado via portal em <body> */
+  z-index: 130;
+  background: var(--card2); border: 1px solid var(--border2); border-radius: var(--r-lg);
+  box-shadow: 0 8px 32px rgba(0,0,0,.5); overflow-y: auto; max-height: 260px; padding: 4px;
+}
+.dd-group + .dd-group { margin-top: 2px; }
+.dd-group-label {
+  padding: 8px 10px 4px; font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--text3);
+}
+.dd-item {
+  padding: 8px 10px; font-size: 12px; font-weight: 600; color: var(--text);
+  border-radius: var(--r); cursor: pointer; transition: background var(--ease), color var(--ease);
+}
+.dd-item:hover { background: var(--accent-dim); }
+.dd-item.selected { background: var(--accent-dim); color: var(--accent); }
+
 .veh-tabela-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
 .veh-tabela-pill {
   padding: 3px 12px; border-radius: 9999px; font-weight: 800; font-size: 12px;
