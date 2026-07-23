@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Dropdown from '../components/Dropdown.jsx';
 import { RAW, IDX, CARGO_LBL, CARGO_SECS, TBL_AXLES, TBL_DESCS, ANTT_SOURCE, fmtNum } from '../utils/anttData.js';
 
 const TABLES = ['A','B','C','D'];
@@ -8,6 +9,24 @@ export default function TablePage() {
   const [cargo, setCargo] = useState('carga_geral');
   const [hl, setHl]       = useState(null); // highlight axles
   const [axleFilter, setAxleFilter] = useState(null); // null = todos
+  const [check, setCheck] = useState({ status: 'idle' }); // idle|loading|uptodate|newer|error
+
+  // Nº e ano da resolução-base (ex.: 'Res. ANTT 6.084/2026' → 6084 / 2026)
+  const baseNum = parseInt((ANTT_SOURCE.resolucao.match(/(\d[\d.]*)\/\d{4}/)?.[1] || '6084').replace(/\D/g, ''), 10);
+  const baseAno = parseInt(ANTT_SOURCE.resolucao.match(/\/(\d{4})/)?.[1] || '2026', 10);
+  const fmtRes  = n => String(n).replace(/(\d)(\d{3})$/, '$1.$2');
+  const resLink = n => `https://anttlegis.antt.gov.br/action/ActionDatalegis.php?acao=abrirTextoAto&tipo=RES&numeroAto=${String(n).padStart(8,'0')}&seqAto=000&valorAno=${baseAno}&orgao=DG/ANTT/MT&cod_modulo=623&cod_menu=9230`;
+
+  const verificar = async () => {
+    setCheck({ status: 'loading' });
+    try {
+      const r = await fetch(`/api/antt-check?base=${baseNum}&ano=${baseAno}`);
+      const d = await r.json();
+      setCheck(d.newer ? { status: 'newer', latest: d.latest } : { status: 'uptodate' });
+    } catch {
+      setCheck({ status: 'error' });
+    }
+  };
 
   const rows = RAW.filter(r => r[IDX.TBL] === tbl && r[IDX.CARGO] === cargo);
   const axles = (TBL_AXLES[tbl] || []).filter(a => axleFilter === null || a === axleFilter);
@@ -30,52 +49,50 @@ export default function TablePage() {
             ))}
           </select>
         </div>
-        <a
-          className="tbl-update-check"
-          href={ANTT_SOURCE.url}
-          target="_blank"
-          rel="noreferrer"
-          title={`Base atual: ${ANTT_SOURCE.resolucao} + ${ANTT_SOURCE.portaria} (vigor ${ANTT_SOURCE.vigor})`}
+        <div
+          className={`tbl-update-check${check.status==='newer'?' is-newer':''}${check.status==='uptodate'?' is-ok':''}`}
+          title={`Base atual: ${ANTT_SOURCE.resolucao} (vigor ${ANTT_SOURCE.vigor})`}
         >
-          <span>🔎 Verificar atualização na portaria oficial</span>
-          <span className="tbl-update-check-sub">Base: {ANTT_SOURCE.resolucao} · vigor {ANTT_SOURCE.vigor}</span>
-        </a>
+          <button type="button" className="tbl-update-check-main" onClick={verificar} disabled={check.status==='loading'}>
+            {check.status==='loading' ? '⏳ Verificando na ANTT…'
+              : check.status==='uptodate' ? '✅ Base atualizada — é a mais recente'
+              : check.status==='newer' ? `⚠️ Nova resolução: Res. ${fmtRes(check.latest)}/${baseAno}`
+              : check.status==='error' ? '❌ Não deu para verificar — abrir portaria'
+              : '🔎 Verificar atualização na ANTT'}
+          </button>
+          <span className="tbl-update-check-sub">
+            {check.status==='newer'
+              ? <>Atualizar base · <a href={resLink(check.latest)} target="_blank" rel="noreferrer">ver Res. {fmtRes(check.latest)}</a></>
+              : <>Base: {ANTT_SOURCE.resolucao} · vigor {ANTT_SOURCE.vigor} · <a href={ANTT_SOURCE.url} target="_blank" rel="noreferrer">portaria oficial</a></>}
+          </span>
+        </div>
       </div>
       <p className="tbl-desc">{TBL_DESCS[tbl]}</p>
 
-      {/* Axle filter */}
-      <div style={{ marginBottom:10, display:'flex', flexWrap:'wrap', gap:5, alignItems:'center' }}>
-        <span style={{ fontSize:9, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'.06em' }}>Eixos:</span>
-        <button
-          className={`tax-pill${axleFilter === null ? ' active' : ''}`}
-          onClick={() => setAxleFilter(null)}
-        >Todos</button>
-        {(TBL_AXLES[tbl] || []).map(a => (
-          <button
-            key={a}
-            className={`tax-pill${axleFilter === a ? ' active' : ''}`}
-            onClick={() => setAxleFilter(axleFilter === a ? null : a)}
-          >{a} eixos</button>
-        ))}
-      </div>
-
-      {/* Cargo selector */}
-      <div style={{ marginBottom:12, display:'flex', flexWrap:'wrap', gap:5 }}>
-        {CARGO_SECS.map(sec => (
-          <React.Fragment key={sec.label}>
-            <span style={{
-              fontSize:9, fontWeight:700, color:'var(--text3)', textTransform:'uppercase',
-              letterSpacing:'.06em', alignSelf:'center', paddingRight:2,
-            }}>{sec.label}:</span>
-            {sec.types.map(t => (
-              <button
-                key={t}
-                className={`tax-pill${cargo===t?' active':''}`}
-                onClick={() => setCargo(t)}
-              >{CARGO_LBL[t]}</button>
-            ))}
-          </React.Fragment>
-        ))}
+      {/* Filtros: Eixos + Tipo de carga (dropdowns no lugar das pills) */}
+      <div className="tbl-filter-row">
+        <div className="select-card tbl-filter-card">
+          <label className="field-label">Eixos</label>
+          <Dropdown
+            value={axleFilter === null ? '__all__' : axleFilter}
+            onChange={v => setAxleFilter(v === '__all__' ? null : Number(v))}
+            options={[
+              { value:'__all__', label:'Todos os eixos' },
+              ...(TBL_AXLES[tbl] || []).map(a => ({ value:a, label:`${a} eixos` })),
+            ]}
+          />
+        </div>
+        <div className="select-card tbl-filter-card">
+          <label className="field-label">Tipo de carga</label>
+          <Dropdown
+            value={cargo}
+            onChange={setCargo}
+            groups={CARGO_SECS.map(sec => ({
+              label: sec.label,
+              options: sec.types.map(t => ({ value:t, label:CARGO_LBL[t] })),
+            }))}
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -136,7 +153,7 @@ export default function TablePage() {
 
       <div className="footer-note" style={{ marginTop:12 }}>
         Valores em R$/km (CCD) e R$ fixo (CC). Clicar em um eixo destaca a coluna.
-        Res. ANTT 6.076/2026 + Portaria SUROC 4/2026 · vigor mar/2026.
+        {ANTT_SOURCE.resolucao} · {ANTT_SOURCE.portaria} · vigor {ANTT_SOURCE.vigor}.
       </div>
     </div>
   );

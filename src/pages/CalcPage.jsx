@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  RAW, IDX, CARGO_LBL, CARGO_SECS, TBL_AXLES, TAX_PROFILES,
+  RAW, IDX, CARGO_LBL, CARGO_SECS, TBL_AXLES, TAX_PROFILES, ANTT_SOURCE,
   resolveTable, findRow, calcPiso, fmtBRL, fmtNum,
 } from '../utils/anttData.js';
 import { geocode, calcDistance } from '../utils/geo.js';
@@ -410,7 +410,7 @@ export default function CalcPage() {
       </div>
 
       <div className="footer-note">
-        Dados conforme <strong>Res. ANTT 6.076/2026 + Portaria SUROC 4/2026</strong> (mar/2026). Distâncias via OSRM + OpenStreetMap.
+        Dados conforme <strong>{ANTT_SOURCE.resolucao}</strong> ({ANTT_SOURCE.vigor}). Distâncias via OSRM + OpenStreetMap.
         Cidades via IBGE. Esta calculadora é uma ferramenta de apoio — confirme valores oficiais em &nbsp;
         <a href="https://www.antt.gov.br" target="_blank" rel="noreferrer">antt.gov.br</a>.
       </div>
