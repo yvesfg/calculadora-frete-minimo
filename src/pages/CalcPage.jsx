@@ -3,6 +3,11 @@ import {
   RAW, IDX, CARGO_LBL, CARGO_SECS, TBL_AXLES, TAX_PROFILES, ANTT_SOURCE,
   resolveTable, findRow, calcPiso, fmtBRL, fmtNum,
 } from '../utils/anttData.js';
+import {
+  ANTT_DIESEL_BASE, CONSUMO_VAZIO_FATOR,
+  dieselUF, dieselMeta, buscarPrecosANP, consumoPreset,
+  calcCombustivel, calcPisoCorrigido,
+} from '../utils/dieselData.js';
 import { geocode, calcDistance } from '../utils/geo.js';
 import CityAutocomplete from '../components/CityAutocomplete.jsx';
 import Icon from '../components/Icon.jsx';
@@ -11,6 +16,20 @@ import Dropdown from '../components/Dropdown.jsx';
 const DEFAULT_INSS = 4.0;
 const DEFAULT_TAX  = 'lr_pf';
 const DEFAULT_MARGIN = 8;
+
+const num = v => parseFloat(String(v).replace(',', '.')) || 0;
+
+// 2026-07-25 → 25/07
+const diaMes = iso => {
+  const [, m, d] = String(iso || '').split('-');
+  return d && m ? `${d}/${m}` : '—';
+};
+
+const LS = {
+  kml:   'calc_fuel_kml',
+  modo:  'calc_fuel_modo',
+  preco: 'calc_fuel_preco',
+};
 
 export default function CalcPage() {
   const [orig, setOrig]   = useState({ uf:'', city:'' });
@@ -35,6 +54,15 @@ export default function CalcPage() {
   const [retornoVazio, setRetornoVazio] = useState(false);
   const [showEmb, setShowEmb]   = useState(false);
   const [embPrice, setEmbPrice] = useState('');
+
+  // Combustível — consumo em km/l e preço do diesel (média regional ou manual)
+  const [kmL, setKmL]           = useState(() => localStorage.getItem(LS.kml) || '');
+  const [kmLAuto, setKmLAuto]   = useState(() => !localStorage.getItem(LS.kml));
+  const [kmLVazio, setKmLVazio] = useState('');
+  const [precoModo, setPrecoModo]     = useState(() => localStorage.getItem(LS.modo) || 'regiao');
+  const [precoManual, setPrecoManual] = useState(() => localStorage.getItem(LS.preco) || '');
+  const [dieselInfo, setDieselInfo]   = useState(() => dieselMeta());
+  const [anp, setAnp] = useState(null); // { type:'load'|'ok'|'err', msg }
 
   const tbl  = resolveTable(hp, fc);
   const km   = parseFloat(String(distKm).replace(',', '.')) || 0;
@@ -63,6 +91,48 @@ export default function CalcPage() {
   const emb = parseFloat(String(embPrice).replace(',','.')) || 0;
   const embVsP1 = price1 && emb ? emb - price1 : null;
   const embVsP2 = price2 && emb ? emb - price2 : null;
+
+  // ── Combustível ────────────────────────────────────────────
+  // O consumo acompanha os eixos enquanto o usuário não digitar o dele.
+  useEffect(() => {
+    if (kmLAuto) setKmL(fmtNum(consumoPreset(axles), 1));
+  }, [axles, kmLAuto]);
+
+  useEffect(() => {
+    if (!kmLAuto) localStorage.setItem(LS.kml, kmL); else localStorage.removeItem(LS.kml);
+  }, [kmL, kmLAuto]);
+  useEffect(() => { localStorage.setItem(LS.modo, precoModo); }, [precoModo]);
+  useEffect(() => { localStorage.setItem(LS.preco, precoManual); }, [precoManual]);
+
+  const precoRegiao = orig.uf ? dieselUF(orig.uf) : dieselInfo.mediaNacional;
+  const precoLitro  = precoModo === 'manual' ? num(precoManual) : precoRegiao;
+  const kml         = num(kmL);
+  const kmlVazio    = num(kmLVazio);
+
+  // Puxa a semana mais recente da ANP (serverless — só responde no deploy).
+  const atualizarANP = async () => {
+    setAnp({ type: 'load', msg: 'Consultando ANP…' });
+    try {
+      await buscarPrecosANP();
+      const m = dieselMeta();
+      setDieselInfo(m);
+      setAnp({ type: 'ok', msg: `ANP · semana de ${diaMes(m.semanaInicio)} a ${diaMes(m.semanaFim)}` });
+    } catch (e) {
+      setAnp({ type: 'err', msg: 'ANP: ' + e.message });
+    }
+  };
+
+  const comb = calcCombustivel(km, kml, precoLitro, retornoVazio, kmlVazio || null);
+  const combPct = comb && costBasis ? comb.custo / costBasis : null;
+
+  // Piso corrigido: quanto o piso "deveria" ser com o diesel local (estimativa)
+  const pisoCorr = calcPisoCorrigido(row?.[IDX.CCD], row?.[IDX.CC], km, kml, precoLitro);
+  const pisoCorrDelta = pisoCorr && piso ? pisoCorr - piso : null;
+  const mostraPisoCorr = pisoCorr && piso && Math.abs(pisoCorrDelta / piso) > 0.005;
+
+  // Cotação da embarcadora que não sobra nem para o custo fixo de carga/descarga
+  const embSobra = emb > 0 && comb ? emb - comb.custo : null;
+  const embAfogado = embSobra != null && row && embSobra < row[IDX.CC];
 
   const lookupRoutes = useCallback(async () => {
     if (!orig.uf || !orig.city || !dest.uf || !dest.city) return;
@@ -223,6 +293,112 @@ export default function CalcPage() {
               </div>
             </div>
           </div>
+
+          {/* Fuel card */}
+          <div className="card">
+            <div className="card-head">
+              <div className="card-head-icon"><Icon name="combustivel" stroke="var(--accent)" size={17} /></div>
+              <div>
+                <div className="card-head-title">Combustível</div>
+                <div className="card-head-sub">Consumo médio + preço do diesel</div>
+              </div>
+            </div>
+            <div className="card-body card-body--compact">
+              <label className="field-label">Consumo médio</label>
+              <div className="dist-badge" style={{ marginTop:0 }}>
+                <span style={{ fontSize:12 }}>⛽</span>
+                <input
+                  value={kmL}
+                  onChange={e => { setKmL(e.target.value); setKmLAuto(false); }}
+                  style={{ width:70, textAlign:'center', fontWeight:700, color:'var(--accent)' }}
+                  placeholder="0,0"
+                />
+                <span style={{ color:'var(--text3)' }}>km/l</span>
+                {kmLAuto ? (
+                  <span className="fuel-tag">padrão {axles} eixos</span>
+                ) : (
+                  <button className="fuel-reset" onClick={() => setKmLAuto(true)}>usar padrão</button>
+                )}
+              </div>
+
+              <div className="fuel-modo-row">
+                <label className="field-label" style={{ marginBottom:0 }}>Preço do diesel</label>
+                <div className="fuel-modo-pills">
+                  <button
+                    className={`tax-pill${precoModo === 'regiao' ? ' active' : ''}`}
+                    onClick={() => setPrecoModo('regiao')}
+                  >Média da região</button>
+                  <button
+                    className={`tax-pill${precoModo === 'manual' ? ' active' : ''}`}
+                    onClick={() => {
+                      if (!precoManual) setPrecoManual(fmtNum(precoRegiao, 3));
+                      setPrecoModo('manual');
+                    }}
+                  >Manual</button>
+                </div>
+              </div>
+
+              <div className="dist-badge" style={{ marginTop:0 }}>
+                <span style={{ fontSize:11, color:'var(--text2)', fontWeight:700 }}>R$</span>
+                {precoModo === 'manual' ? (
+                  <input
+                    value={precoManual}
+                    onChange={e => setPrecoManual(e.target.value)}
+                    style={{ width:80, textAlign:'center', fontWeight:700, color:'var(--accent)' }}
+                    placeholder="0,000"
+                  />
+                ) : (
+                  <span style={{ fontWeight:700, color:'var(--accent)', minWidth:60, textAlign:'center' }}>
+                    {fmtNum(precoRegiao, 3)}
+                  </span>
+                )}
+                <span style={{ color:'var(--text3)' }}>/litro</span>
+                {precoModo === 'regiao' && (
+                  <span className="fuel-tag">
+                    {orig.uf || 'Brasil'} · ANP {diaMes(dieselInfo.semanaFim)}
+                    {dieselInfo.aoVivo && <span className="fuel-live">ao vivo</span>}
+                  </span>
+                )}
+              </div>
+
+              {precoModo === 'regiao' && (
+                <div className="fuel-anp-row">
+                  <button className="fuel-anp-btn" onClick={atualizarANP} disabled={anp?.type === 'load'}>
+                    {anp?.type === 'load' ? 'Consultando…' : 'Atualizar pela ANP'}
+                  </button>
+                  {anp && anp.type !== 'load' && (
+                    <span className={`fuel-anp-msg${anp.type === 'err' ? ' err' : ''}`}>{anp.msg}</span>
+                  )}
+                </div>
+              )}
+
+              {precoModo === 'regiao' && !orig.uf && (
+                <div className="fuel-hint">Informe a origem para usar a média do estado.</div>
+              )}
+              {precoModo === 'regiao' && dieselInfo.idadeDias > 21 && (
+                <div className="fuel-hint warn">
+                  ⚠ Levantamento de {diaMes(dieselInfo.semanaFim)} ({dieselInfo.idadeDias} dias) — vale atualizar.
+                </div>
+              )}
+
+              {retornoVazio && (
+                <div style={{ marginTop:10 }}>
+                  <label className="field-label">Consumo no retorno vazio (opcional)</label>
+                  <div className="dist-badge" style={{ marginTop:0 }}>
+                    <span style={{ fontSize:12 }}>🍃</span>
+                    <input
+                      value={kmLVazio}
+                      onChange={e => setKmLVazio(e.target.value)}
+                      style={{ width:70, textAlign:'center', fontWeight:700, color:'var(--accent)' }}
+                      placeholder={kml ? fmtNum(kml * CONSUMO_VAZIO_FATOR, 1) : '0,0'}
+                    />
+                    <span style={{ color:'var(--text3)' }}>km/l</span>
+                    <span className="fuel-tag">padrão +30%</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* RIGHT COLUMN — results */}
@@ -271,8 +447,65 @@ export default function CalcPage() {
                   )}
                 </div>
 
+                {comb && (
+                  <div className="fuel-result">
+                    <div className="fuel-result-head">
+                      <Icon name="combustivel" stroke="var(--cyan)" size={14} />
+                      <span className="fuel-result-title">Custo de combustível</span>
+                      <span className="fuel-result-total">{fmtBRL(comb.custo)}</span>
+                    </div>
+                    <div className="result-row">
+                      <span className="result-row-label">Litros estimados</span>
+                      <span className="result-row-val">
+                        {fmtNum(comb.litros, 0)} l
+                        {retornoVazio && (
+                          <span style={{ color:'var(--text3)', fontWeight:400, marginLeft:4 }}>
+                            (ida {fmtNum(comb.litrosIda, 0)} + volta {fmtNum(comb.litrosVolta, 0)})
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="result-row">
+                      <span className="result-row-label">Diesel por km</span>
+                      <span className="result-row-val">
+                        R$ {fmtNum(comb.custoPorKm, 3)}/km
+                        <span style={{ color:'var(--text3)', fontWeight:400, marginLeft:4 }}>
+                          · {fmtNum(kml, 1)} km/l a R$ {fmtNum(precoLitro, 3)}
+                        </span>
+                      </span>
+                    </div>
+                    {combPct != null && (
+                      <div className="result-row">
+                        <span className="result-row-label">% do {retornoVazio ? 'custeio' : 'piso'}</span>
+                        <span className={`result-row-val${combPct > 0.6 ? ' warn' : ''}`}>
+                          {fmtNum(combPct * 100, 1)}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {mostraPisoCorr && (
+                  <div className={`piso-corr${pisoCorrDelta > 0 ? ' up' : ' down'}`}>
+                    <div className="piso-corr-head">
+                      <span className="piso-corr-label">Piso indicativo com o diesel local</span>
+                      <span className="piso-corr-val">
+                        {fmtBRL(pisoCorr)}
+                        <span className="piso-corr-delta">
+                          {pisoCorrDelta > 0 ? '+' : ''}{fmtNum(pisoCorrDelta / piso * 100, 1)}%
+                        </span>
+                      </span>
+                    </div>
+                    <div className="piso-corr-note">
+                      Diesel a R$ {fmtNum(precoLitro, 3)}/l contra R$ {fmtNum(ANTT_DIESEL_BASE.preco, 2)}/l usados na{' '}
+                      {ANTT_DIESEL_BASE.resolucao}, ao seu consumo de {fmtNum(kml, 1)} km/l.
+                      <strong> Estimativa para negociação — o piso legal continua sendo o oficial.</strong>
+                    </div>
+                  </div>
+                )}
+
                 <div className="result-note">
-                  Piso = CCD × distância + CC &nbsp;·&nbsp; Res. ANTT 6.442/2021
+                  Piso = CCD × distância + CC &nbsp;·&nbsp; {ANTT_SOURCE.resolucao}
                 </div>
                 <div className="result-note" style={{ paddingTop:0 }}>
                   🛣️ Pedágio não incluso no piso — deve ser pago à parte, conforme legislação.
@@ -331,6 +564,7 @@ export default function CalcPage() {
                       totalTax={totalTax}
                       inss={inss}
                       tp={tp}
+                      fuel={comb?.custo}
                     />
                     <ScenarioCard
                       title="Margem Real"
@@ -341,6 +575,7 @@ export default function CalcPage() {
                       totalTax={totalTax}
                       inss={inss}
                       tp={tp}
+                      fuel={comb?.custo}
                     />
                   </div>
                 </div>
@@ -373,6 +608,12 @@ export default function CalcPage() {
                             ⚠ Abaixo do piso ANTT ({fmtBRL(piso)}) — vedado por lei
                           </div>
                         )}
+                        {embAfogado && (
+                          <div className="emb-warn-bar emb-warn-bar--fuel">
+                            🔥 Sobram {fmtBRL(embSobra)} depois do diesel — menos que o custo fixo de
+                            carga/descarga ({fmtBRL(row[IDX.CC])}). Viagem no prejuízo.
+                          </div>
+                        )}
                         {emb > 0 && (
                           <>
                             <div className="emb-row">
@@ -394,6 +635,14 @@ export default function CalcPage() {
                                 <span className="emb-row-lbl">vs. Margem Real</span>
                                 <span className="emb-row-val" style={{ color: embVsP2 >= 0 ? 'var(--green)' : 'var(--red)' }}>
                                   {fmtBRL(embVsP2)}
+                                </span>
+                              </div>
+                            )}
+                            {embSobra != null && (
+                              <div className="emb-row">
+                                <span className="emb-row-lbl">Sobra após diesel</span>
+                                <span className="emb-row-val" style={{ color: embAfogado ? 'var(--red)' : 'var(--cyan)' }}>
+                                  {fmtBRL(embSobra)}
                                 </span>
                               </div>
                             )}
@@ -430,7 +679,10 @@ function ToggleCard({ label, sublabel, value, onChange }) {
   );
 }
 
-function ScenarioCard({ title, subtitle, price, net, basis, totalTax, inss, tp }) {
+function ScenarioCard({ title, subtitle, price, net, basis, totalTax, inss, tp, fuel }) {
+  // Bruto após imposto e diesel — os demais custos (pneu, manutenção,
+  // motorista) já estão modelados dentro do piso, então não entram aqui.
+  const posDiesel = price && fuel ? price * (1 - totalTax) - fuel : null;
   return (
     <div className="margin-scenario">
       <div className="margin-scenario-head">
@@ -464,6 +716,17 @@ function ScenarioCard({ title, subtitle, price, net, basis, totalTax, inss, tp }
           ) : null}
         </span>
       </div>
+      {posDiesel != null && (
+        <div className="margin-fuel-row">
+          <span className="margin-fuel-label">
+            Após diesel
+            <span className="margin-fuel-hint">recebido − imp. − {fmtBRL(fuel)}</span>
+          </span>
+          <span className="margin-fuel-val" style={{ color: posDiesel >= 0 ? 'var(--cyan)' : 'var(--red)' }}>
+            {fmtBRL(posDiesel)}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { RAW, IDX, CARGO_LBL, resolveTable, findRow, calcPiso, fmtBRL, fmtNum } from '../utils/anttData.js';
+import { dieselUF, dieselMeta, consumoPreset, calcCombustivel } from '../utils/dieselData.js';
 import { geocode, calcDistance } from '../utils/geo.js';
 import Icon from '../components/Icon.jsx';
 
@@ -7,6 +8,8 @@ const DEFAULT_AXLES   = 5;
 const DEFAULT_CARGO   = 'carga_geral';
 const DEFAULT_HP      = false;
 const DEFAULT_FC      = false;
+
+const num = v => parseFloat(String(v).replace(',', '.')) || 0;
 
 function parseSheet(text) {
   const lines = text.trim().split('\n');
@@ -80,6 +83,10 @@ export default function SheetPage() {
   const [progress, setProgress] = useState(0);
   const [dragOver, setDragOver] = useState(false);
   const [intake, setIntake]   = useState(null); // { type:'load'|'ok'|'err', msg }
+  // Combustível do lote — km/l vazio = usa o padrão de cada linha pelos eixos
+  const [kmL, setKmL] = useState('');
+  const [precoModo, setPrecoModo]     = useState('regiao');
+  const [precoManual, setPrecoManual] = useState('');
   const textRef = useRef(null);
   const fileRef = useRef(null);
 
@@ -189,15 +196,29 @@ export default function SheetPage() {
     e.target.value = '';
   };
 
+  // Combustível é derivado (não congelado no Calcular): mexer no km/l ou no
+  // preço recalcula o lote inteiro na hora.
+  const kmlGlobal = num(kmL);
+  const rowsFuel = rows.map(r => {
+    const kml   = kmlGlobal || consumoPreset(r.axles);
+    const preco = precoModo === 'manual' ? num(precoManual) : dieselUF(r.uf_orig);
+    return { ...r, kml, precoLitro: preco, comb: calcCombustivel(r.km, kml, preco, false, null) };
+  });
+
   const exportCSV = () => {
-    const header = 'UF_orig,Cidade_orig,UF_dest,Cidade_dest,Distância_km,Eixos,TipoCarga,Tabela,CCD,CC,Piso_ANTT';
-    const lines  = rows.map(r => [
+    const dec = v => (v == null ? '' : fmtNum(v, 2).replace('.', '').replace(',', '.'));
+    const header = 'UF_orig,Cidade_orig,UF_dest,Cidade_dest,Distância_km,Eixos,TipoCarga,Tabela,CCD,CC,Piso_ANTT,Consumo_km_l,Diesel_R$_l,Litros,Custo_diesel';
+    const lines  = rowsFuel.map(r => [
       r.uf_orig, r.city_orig, r.uf_dest, r.city_dest,
       r.km, r.axles, r.cargo,
       r.tbl,
       r.row?.[IDX.CCD] || '',
       r.row?.[IDX.CC] || '',
       r.piso ? fmtNum(r.piso).replace('.','').replace(',','.') : '',
+      dec(r.kml),
+      r.precoLitro ? fmtNum(r.precoLitro, 3).replace('.','').replace(',','.') : '',
+      dec(r.comb?.litros),
+      dec(r.comb?.custo),
     ].join(','));
     const blob = new Blob([[header, ...lines].join('\n')], { type:'text/csv;charset=utf-8' });
     const a = document.createElement('a');
@@ -220,6 +241,7 @@ export default function SheetPage() {
   };
 
   const totalPiso = rows.reduce((acc, r) => acc + (r.piso || 0), 0);
+  const totalDiesel = rowsFuel.reduce((acc, r) => acc + (r.comb?.custo || 0), 0);
 
   const intakeColor = intake?.type === 'err' ? 'var(--red)'
     : intake?.type === 'ok' ? 'var(--accent)' : 'var(--text3)';
@@ -277,6 +299,48 @@ export default function SheetPage() {
             </div>
           )}
 
+          <div className="sheet-fuel-bar">
+            <Icon name="combustivel" stroke="var(--cyan)" size={14} />
+            <span className="sheet-fuel-lbl">Combustível</span>
+            <div className="dist-badge" style={{ marginTop:0, width:'auto' }}>
+              <input
+                value={kmL}
+                onChange={e => setKmL(e.target.value)}
+                style={{ width:56, textAlign:'center', fontWeight:700, color:'var(--accent)' }}
+                placeholder="auto"
+              />
+              <span style={{ color:'var(--text3)' }}>km/l</span>
+            </div>
+            <span className="sheet-fuel-hint">
+              {kmlGlobal ? 'aplicado a todas as linhas' : 'padrão por eixos de cada linha'}
+            </span>
+            <div className="fuel-modo-pills" style={{ marginLeft:'auto' }}>
+              <button
+                className={`tax-pill${precoModo === 'regiao' ? ' active' : ''}`}
+                onClick={() => setPrecoModo('regiao')}
+              >Diesel por UF de origem{dieselMeta().aoVivo ? ' (ANP ao vivo)' : ''}</button>
+              <button
+                className={`tax-pill${precoModo === 'manual' ? ' active' : ''}`}
+                onClick={() => {
+                  if (!precoManual) setPrecoManual(fmtNum(dieselMeta().mediaNacional, 3));
+                  setPrecoModo('manual');
+                }}
+              >Preço único</button>
+            </div>
+            {precoModo === 'manual' && (
+              <div className="dist-badge" style={{ marginTop:0, width:'auto' }}>
+                <span style={{ fontSize:11, color:'var(--text2)', fontWeight:700 }}>R$</span>
+                <input
+                  value={precoManual}
+                  onChange={e => setPrecoManual(e.target.value)}
+                  style={{ width:70, textAlign:'center', fontWeight:700, color:'var(--accent)' }}
+                  placeholder="0,000"
+                />
+                <span style={{ color:'var(--text3)' }}>/l</span>
+              </div>
+            )}
+          </div>
+
           <div style={{ display:'flex', gap:8, marginTop:10, flexWrap:'wrap', alignItems:'center' }}>
             <div className="toggles-row toggles-row--mini">
               <ToggleCard label="Composição Veicular" sublabel="Tab.A/C" value={fc} onChange={setFc} />
@@ -305,7 +369,10 @@ export default function SheetPage() {
             <div className="card-head-icon"><Icon name="resultado" stroke="var(--accent)" size={17} /></div>
             <div>
               <div className="card-head-title">Resultados — {rows.length} rotas</div>
-              <div className="card-head-sub">Total: {fmtBRL(totalPiso)}</div>
+              <div className="card-head-sub">
+                Piso: {fmtBRL(totalPiso)}
+                {totalDiesel > 0 && <> &nbsp;·&nbsp; Diesel: {fmtBRL(totalDiesel)}</>}
+              </div>
             </div>
           </div>
           <div style={{ overflowX:'auto' }}>
@@ -318,10 +385,11 @@ export default function SheetPage() {
                   <th>Eixos</th>
                   <th>Tab</th>
                   <th>Piso ANTT</th>
+                  <th>Diesel</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r, i) => (
+                {rowsFuel.map((r, i) => (
                   <tr key={i}>
                     <td>
                       <span className="td-uf">{r.uf_orig}</span>
@@ -340,6 +408,16 @@ export default function SheetPage() {
                         : r.piso ? fmtBRL(r.piso) : <span className="td-empty">—</span>
                       }
                     </td>
+                    <td className="td-diesel">
+                      {r.comb ? (
+                        <>
+                          {fmtBRL(r.comb.custo)}
+                          <span className="td-diesel-sub">
+                            {fmtNum(r.comb.litros, 0)} l · {fmtNum(r.kml, 1)} km/l · R$ {fmtNum(r.precoLitro, 3)}
+                          </span>
+                        </>
+                      ) : <span className="td-empty">—</span>}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -347,6 +425,7 @@ export default function SheetPage() {
                 <tr>
                   <td colSpan={5} className="td-total-lbl">Total</td>
                   <td className="td-piso">{fmtBRL(totalPiso)}</td>
+                  <td className="td-diesel">{fmtBRL(totalDiesel)}</td>
                 </tr>
               </tfoot>
             </table>

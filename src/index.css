@@ -360,6 +360,99 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .emb-result-label { font-size: 8px; text-transform: uppercase; letter-spacing: .1em; color: var(--text3); margin-bottom: 3px; }
 .emb-result-value { font-size: 20px; font-weight: 700; color: var(--green); }
 .emb-result-pct   { font-size: 10px; color: var(--text3); margin-left: 4px; }
+.emb-warn-bar--fuel {
+  background: var(--cyan-dim); border-color: rgba(6,182,212,.25); color: var(--cyan);
+}
+
+/* Combustível — card de entrada */
+.fuel-tag {
+  margin-left: auto; font-size: 9px; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .04em; white-space: nowrap;
+}
+.fuel-reset {
+  margin-left: auto; font-size: 9px; color: var(--accent); background: none;
+  border: none; cursor: pointer; text-transform: uppercase; letter-spacing: .04em;
+  padding: 0; white-space: nowrap;
+}
+.fuel-reset:hover { text-decoration: underline; }
+.fuel-modo-row {
+  display: flex; align-items: center; gap: 8px;
+  margin: 12px 0 6px; flex-wrap: wrap;
+}
+.fuel-modo-pills { display: flex; gap: 4px; margin-left: auto; }
+.fuel-hint { font-size: 10px; color: var(--text3); margin-top: 6px; line-height: 1.5; }
+.fuel-hint.warn { color: var(--yellow); }
+.fuel-live {
+  margin-left: 5px; padding: 1px 5px; border-radius: 999px;
+  background: var(--green-dim); color: var(--green); font-size: 8px; letter-spacing: .04em;
+}
+.fuel-anp-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.fuel-anp-btn {
+  font-size: 10px; color: var(--cyan); background: var(--cyan-dim);
+  border: 1px solid rgba(6,182,212,.25); border-radius: var(--r);
+  padding: 4px 9px; cursor: pointer; transition: opacity var(--ease);
+}
+.fuel-anp-btn:hover:not(:disabled) { opacity: .8; }
+.fuel-anp-btn:disabled { opacity: .5; cursor: default; }
+.fuel-anp-msg { font-size: 10px; color: var(--text3); }
+.fuel-anp-msg.err { color: var(--red); }
+
+/* Combustível — bloco de resultado */
+.fuel-result { padding: 10px 16px; border-bottom: 1px solid var(--border); }
+.fuel-result-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.fuel-result-title {
+  font-size: 10px; font-weight: 700; color: var(--text2);
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.fuel-result-total {
+  margin-left: auto; font-size: 14px; font-weight: 700; color: var(--cyan);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Piso indicativo corrigido pelo diesel */
+.piso-corr {
+  margin: 0 16px 10px; padding: 10px 12px;
+  border: 1px dashed var(--border2); border-radius: var(--r);
+  background: var(--surface);
+}
+.piso-corr.up   { border-color: rgba(245,158,11,.35); }
+.piso-corr.down { border-color: rgba(16,185,129,.35); }
+.piso-corr-head { display: flex; align-items: baseline; gap: 8px; }
+.piso-corr-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; }
+.piso-corr-val {
+  margin-left: auto; font-size: 14px; font-weight: 700; color: var(--text);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.piso-corr.up   .piso-corr-delta { color: var(--orange); }
+.piso-corr.down .piso-corr-delta { color: var(--green); }
+.piso-corr-delta { font-size: 10px; margin-left: 5px; }
+.piso-corr-note { font-size: 10px; color: var(--text3); line-height: 1.6; margin-top: 5px; }
+.piso-corr-note strong { color: var(--text2); font-weight: 600; }
+
+/* Linha "após diesel" nos cenários de margem */
+.margin-fuel-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 10px; border-top: 1px solid var(--border);
+  background: var(--cyan-dim); font-size: 11px;
+}
+.margin-fuel-label { color: var(--text2); font-weight: 600; display: flex; flex-direction: column; }
+.margin-fuel-hint  { font-size: 9px; color: var(--text3); font-weight: 400; }
+.margin-fuel-val   { font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; }
+
+/* Combustível na planilha (lote) */
+.sheet-fuel-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 10px; padding: 8px 10px;
+  background: var(--cyan-dim); border: 1px solid rgba(6,182,212,.18);
+  border-radius: var(--r);
+}
+.sheet-fuel-lbl {
+  font-size: 10px; font-weight: 700; color: var(--text2);
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.sheet-fuel-hint { font-size: 10px; color: var(--text3); }
+.td-diesel { text-align: right; color: var(--cyan); font-weight: 600; white-space: nowrap; }
+.td-diesel-sub { display: block; font-size: 9px; color: var(--text3); font-weight: 400; }
 
 /* Route alternatives */
 .route-alts { margin-top: 10px; }
