@@ -8,6 +8,9 @@ import {
   dieselUF, dieselMeta, buscarPrecosANP, consumoPreset,
   calcCombustivel, calcPisoCorrigido,
 } from '../utils/dieselData.js';
+import {
+  SEGURO_TAXA_PADRAO, ICMS_PRESETS, ICMS_PADRAO, calcSeguro, aplicarICMS,
+} from '../utils/comercialData.js';
 import { geocode, calcDistance } from '../utils/geo.js';
 import CityAutocomplete from '../components/CityAutocomplete.jsx';
 import Icon from '../components/Icon.jsx';
@@ -29,6 +32,8 @@ const LS = {
   kml:   'calc_fuel_kml',
   modo:  'calc_fuel_modo',
   preco: 'calc_fuel_preco',
+  seg:   'calc_seguro_taxa',
+  icms:  'calc_icms_aliq',
 };
 
 export default function CalcPage() {
@@ -48,12 +53,23 @@ export default function CalcPage() {
   const [cargo, setCargo] = useState('carga_geral');
   const [pesoTon, setPesoTon] = useState('');
 
+  // Seguro da carga — % sobre o valor da nota fiscal (fora do piso ANTT)
+  const [valorNF, setValorNF]     = useState('');
+  const [taxaSeguro, setTaxaSeg]  = useState(
+    () => localStorage.getItem(LS.seg) || fmtNum(SEGURO_TAXA_PADRAO, 3)
+  );
+
   const [margin, setMargin]     = useState(DEFAULT_MARGIN);
   const [taxProfile, setTax]    = useState(DEFAULT_TAX);
   const [inss, setInss]         = useState(DEFAULT_INSS);
   const [retornoVazio, setRetornoVazio] = useState(false);
   const [showEmb, setShowEmb]   = useState(false);
   const [embPrice, setEmbPrice] = useState('');
+  const [embModo, setEmbModo]   = useState('total');  // 'total' | 'ton'
+  const [embIcms, setEmbIcms]   = useState('sem');    // 'sem' (líquido) | 'com' (CTe)
+  const [icmsAliq, setIcmsAliq] = useState(
+    () => localStorage.getItem(LS.icms) || String(ICMS_PADRAO)
+  );
 
   // Combustível — consumo em km/l e preço do diesel (média regional ou manual)
   const [kmL, setKmL]           = useState(() => localStorage.getItem(LS.kml) || '');
@@ -88,7 +104,25 @@ export default function CalcPage() {
   const net1 = price1 && costBasis ? price1 - costBasis : null;
   const net2 = price2 && costBasis ? price2 * (1 - totalTax) - costBasis : null;
 
-  const emb = parseFloat(String(embPrice).replace(',','.')) || 0;
+  // ── Seguro da carga ────────────────────────────────────────
+  // Custo de fora do piso: % sobre o valor da NF transportada.
+  const nf     = num(valorNF);
+  const seg    = calcSeguro(nf, num(taxaSeguro));
+  const seguro = seg?.custo || 0;
+  const seguroPct = seguro && costBasis ? seguro / costBasis : null;
+
+  // ── Cotação da embarcadora ─────────────────────────────────
+  // Aceita o valor cheio do trecho ou R$/tonelada, com ou sem ICMS embutido.
+  // `emb` continua sendo a base de comparação = o que fica com o transportador
+  // (líquido de ICMS); com o modo "sem ICMS" ela é o próprio valor digitado.
+  const embInput = num(embPrice);
+  const embTotal = embModo === 'ton' ? embInput * peso : embInput;
+  const embIcmsCalc = aplicarICMS(embTotal, num(icmsAliq), embIcms === 'com');
+  const emb        = embIcmsCalc?.liquido || 0;
+  const embBruto   = embIcmsCalc?.bruto   || 0;
+  const embIcmsVal = embIcmsCalc?.icms    || 0;
+  const embTon      = peso > 0 && emb      ? emb / peso      : null;
+  const embTonBruto = peso > 0 && embBruto ? embBruto / peso : null;
   const embVsP1 = price1 && emb ? emb - price1 : null;
   const embVsP2 = price2 && emb ? emb - price2 : null;
 
@@ -103,6 +137,8 @@ export default function CalcPage() {
   }, [kmL, kmLAuto]);
   useEffect(() => { localStorage.setItem(LS.modo, precoModo); }, [precoModo]);
   useEffect(() => { localStorage.setItem(LS.preco, precoManual); }, [precoManual]);
+  useEffect(() => { localStorage.setItem(LS.seg,  taxaSeguro); }, [taxaSeguro]);
+  useEffect(() => { localStorage.setItem(LS.icms, icmsAliq);   }, [icmsAliq]);
 
   const precoRegiao = orig.uf ? dieselUF(orig.uf) : dieselInfo.mediaNacional;
   const precoLitro  = precoModo === 'manual' ? num(precoManual) : precoRegiao;
@@ -130,8 +166,12 @@ export default function CalcPage() {
   const pisoCorrDelta = pisoCorr && piso ? pisoCorr - piso : null;
   const mostraPisoCorr = pisoCorr && piso && Math.abs(pisoCorrDelta / piso) > 0.005;
 
+  // Custos diretos que não estão no piso: diesel + seguro da carga
+  const extras = (comb?.custo || 0) + seguro;
+  const extrasLbl = comb && seguro ? 'diesel e seguro' : seguro ? 'seguro' : 'diesel';
+
   // Cotação da embarcadora que não sobra nem para o custo fixo de carga/descarga
-  const embSobra = emb > 0 && comb ? emb - comb.custo : null;
+  const embSobra = emb > 0 && extras > 0 ? emb - extras : null;
   const embAfogado = embSobra != null && row && embSobra < row[IDX.CC];
 
   const lookupRoutes = useCallback(async () => {
@@ -289,6 +329,34 @@ export default function CalcPage() {
                     placeholder="0"
                   />
                   <span style={{ color:'var(--text3)' }}>toneladas</span>
+                </div>
+              </div>
+
+              {/* Seguro da carga — % sobre o valor da NF, cobrado fora do piso */}
+              <div style={{ marginTop:10 }}>
+                <label className="field-label">Valor da NF (para o seguro)</label>
+                <div className="dist-badge" style={{ marginTop:0 }}>
+                  <span style={{ fontSize:11, color:'var(--text2)', fontWeight:700 }}>R$</span>
+                  <input
+                    value={valorNF}
+                    onChange={e => setValorNF(e.target.value)}
+                    style={{ flex:1, textAlign:'right', fontWeight:700, color:'var(--accent)' }}
+                    placeholder="0,00"
+                  />
+                </div>
+                <div className="dist-badge" style={{ marginTop:6 }}>
+                  <Icon name="seguro" stroke="var(--yellow)" size={13} />
+                  <span style={{ color:'var(--text3)' }}>Seguro</span>
+                  <input
+                    value={taxaSeguro}
+                    onChange={e => setTaxaSeg(e.target.value)}
+                    style={{ width:64, textAlign:'center', fontWeight:700, color:'var(--accent)' }}
+                    placeholder="0,024"
+                  />
+                  <span style={{ color:'var(--text3)' }}>% da NF</span>
+                  {seguro > 0
+                    ? <span className="fuel-tag" style={{ color:'var(--yellow)' }}>= {fmtBRL(seguro)}</span>
+                    : <span className="fuel-tag">padrão {fmtNum(SEGURO_TAXA_PADRAO, 3)}%</span>}
                 </div>
               </div>
             </div>
@@ -485,6 +553,33 @@ export default function CalcPage() {
                   </div>
                 )}
 
+                {seg && (
+                  <div className="fuel-result fuel-result--seguro">
+                    <div className="fuel-result-head">
+                      <Icon name="seguro" stroke="var(--yellow)" size={14} />
+                      <span className="fuel-result-title">Seguro da carga</span>
+                      <span className="fuel-result-total">{fmtBRL(seguro)}</span>
+                    </div>
+                    <div className="result-row">
+                      <span className="result-row-label">Valor da NF</span>
+                      <span className="result-row-val">{fmtBRL(nf)}</span>
+                    </div>
+                    <div className="result-row">
+                      <span className="result-row-label">Taxa da seguradora</span>
+                      <span className="result-row-val">{fmtNum(seg.taxaPct, 3)}% sobre a NF</span>
+                    </div>
+                    {seguroPct != null && (
+                      <div className="result-row">
+                        <span className="result-row-label">% do {retornoVazio ? 'custeio' : 'piso'}</span>
+                        <span className="result-row-val">{fmtNum(seguroPct * 100, 1)}%</span>
+                      </div>
+                    )}
+                    <div className="result-note" style={{ padding:'6px 0 0', borderTop:'none' }}>
+                      Custo fora do piso ANTT — o piso cobre só o deslocamento.
+                    </div>
+                  </div>
+                )}
+
                 {mostraPisoCorr && (
                   <div className={`piso-corr${pisoCorrDelta > 0 ? ' up' : ' down'}`}>
                     <div className="piso-corr-head">
@@ -564,7 +659,8 @@ export default function CalcPage() {
                       totalTax={totalTax}
                       inss={inss}
                       tp={tp}
-                      fuel={comb?.custo}
+                      extras={extras}
+                      extrasLbl={extrasLbl}
                     />
                     <ScenarioCard
                       title="Margem Real"
@@ -575,7 +671,8 @@ export default function CalcPage() {
                       totalTax={totalTax}
                       inss={inss}
                       tp={tp}
-                      fuel={comb?.custo}
+                      extras={extras}
+                      extrasLbl={extrasLbl}
                     />
                   </div>
                 </div>
@@ -593,6 +690,20 @@ export default function CalcPage() {
                     </div>
                     {showEmb && (
                       <div className="embarcadora-body">
+                        <div className="fuel-modo-row" style={{ margin:'0 0 6px' }}>
+                          <span className="field-label" style={{ marginBottom:0 }}>Como a embarcadora cota</span>
+                          <div className="fuel-modo-pills">
+                            <button
+                              className={`tax-pill${embModo === 'total' ? ' active' : ''}`}
+                              onClick={() => setEmbModo('total')}
+                            >Valor do trecho</button>
+                            <button
+                              className={`tax-pill${embModo === 'ton' ? ' active' : ''}`}
+                              onClick={() => setEmbModo('ton')}
+                            >R$ / tonelada</button>
+                          </div>
+                        </div>
+
                         <div className="embarcadora-inp-row">
                           <span className="embarcadora-prefix">R$</span>
                           <input
@@ -602,22 +713,109 @@ export default function CalcPage() {
                             onChange={e => setEmbPrice(e.target.value)}
                             placeholder="0,00"
                           />
+                          <span className="embarcadora-prefix" style={{ color:'var(--text3)', fontWeight:400 }}>
+                            {embModo === 'ton' ? '/ton' : 'no trecho'}
+                          </span>
                         </div>
-                        {emb > 0 && emb < piso && (
+
+                        {embModo === 'ton' && peso <= 0 && (
+                          <div className="fuel-hint warn" style={{ marginBottom:8 }}>
+                            ⚠ Informe o peso da carga no cartão "Tipo de Carga" para converter R$/ton em valor do trecho.
+                          </div>
+                        )}
+
+                        <div className="fuel-modo-row" style={{ margin:'0 0 6px' }}>
+                          <span className="field-label" style={{ marginBottom:0 }}>ICMS do frete</span>
+                          <div className="fuel-modo-pills">
+                            <button
+                              className={`tax-pill${embIcms === 'sem' ? ' active' : ''}`}
+                              onClick={() => setEmbIcms('sem')}
+                            >Sem ICMS</button>
+                            <button
+                              className={`tax-pill${embIcms === 'com' ? ' active' : ''}`}
+                              onClick={() => setEmbIcms('com')}
+                            >Com ICMS</button>
+                          </div>
+                        </div>
+
+                        <div className="dist-badge" style={{ marginTop:0, marginBottom:8 }}>
+                          <span style={{ color:'var(--text3)' }}>Alíquota</span>
+                          <input
+                            value={icmsAliq}
+                            onChange={e => setIcmsAliq(e.target.value)}
+                            style={{ width:56, textAlign:'center', fontWeight:700, color:'var(--accent)' }}
+                            placeholder="12"
+                          />
+                          <span style={{ color:'var(--text3)' }}>%</span>
+                          <div className="fuel-modo-pills">
+                            {ICMS_PRESETS.map(a => (
+                              <button
+                                key={a}
+                                className={`tax-pill${num(icmsAliq) === a ? ' active' : ''}`}
+                                onClick={() => setIcmsAliq(String(a))}
+                              >{a}%</button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="fuel-hint" style={{ marginTop:0, marginBottom:8 }}>
+                          {embIcms === 'com'
+                            ? 'O valor digitado é o do CTe (ICMS por dentro). As comparações usam o líquido.'
+                            : 'O valor digitado é líquido de ICMS. O bruto abaixo é o CTe necessário para receber isso.'}
+                        </div>
+                        {embBruto > 0 && embBruto < piso && (
                           <div className="emb-warn-bar">
-                            ⚠ Abaixo do piso ANTT ({fmtBRL(piso)}) — vedado por lei
+                            ⚠ Valor pago ({fmtBRL(embBruto)}) abaixo do piso ANTT ({fmtBRL(piso)}) — vedado por lei
                           </div>
                         )}
                         {embAfogado && (
                           <div className="emb-warn-bar emb-warn-bar--fuel">
-                            🔥 Sobram {fmtBRL(embSobra)} depois do diesel — menos que o custo fixo de
+                            🔥 Sobram {fmtBRL(embSobra)} depois do {extrasLbl} — menos que o custo fixo de
                             carga/descarga ({fmtBRL(row[IDX.CC])}). Viagem no prejuízo.
                           </div>
                         )}
                         {emb > 0 && (
                           <>
+                            <div className="emb-cotacao">
+                              <div className="emb-row">
+                                <span className="emb-row-lbl">Valor do CTe (com ICMS {fmtNum(num(icmsAliq), 0)}%)</span>
+                                <span className="emb-row-val">{fmtBRL(embBruto)}</span>
+                              </div>
+                              <div className="emb-row">
+                                <span className="emb-row-lbl">ICMS embutido</span>
+                                <span className="emb-row-val" style={{ color:'var(--text3)' }}>−{fmtBRL(embIcmsVal)}</span>
+                              </div>
+                              <div className="emb-row">
+                                <span className="emb-row-lbl">Líquido para o transportador</span>
+                                <span className="emb-row-val" style={{ color:'var(--accent)' }}>{fmtBRL(emb)}</span>
+                              </div>
+                              {embTon != null ? (
+                                <>
+                                  <div className="emb-row">
+                                    <span className="emb-row-lbl">Por tonelada · com ICMS</span>
+                                    <span className="emb-row-val">R$ {fmtNum(embTonBruto, 2)}/ton</span>
+                                  </div>
+                                  <div className="emb-row">
+                                    <span className="emb-row-lbl">Por tonelada · sem ICMS</span>
+                                    <span className="emb-row-val" style={{ color:'var(--accent)' }}>
+                                      R$ {fmtNum(embTon, 2)}/ton
+                                    </span>
+                                  </div>
+                                  {pisoPorTon != null && (
+                                    <div className="emb-row">
+                                      <span className="emb-row-lbl">Piso ANTT por tonelada</span>
+                                      <span className="emb-row-val" style={{ color: embTon >= pisoPorTon ? 'var(--green)' : 'var(--red)' }}>
+                                        R$ {fmtNum(pisoPorTon, 2)}/ton
+                                      </span>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <div className="fuel-hint">Informe o peso da carga para ver o valor por tonelada.</div>
+                              )}
+                            </div>
+
                             <div className="emb-row">
-                              <span className="emb-row-lbl">vs. Piso ANTT</span>
+                              <span className="emb-row-lbl">vs. Piso ANTT{embIcmsVal > 0 ? ' (líquido)' : ''}</span>
                               <span className="emb-row-val" style={{ color: emb >= piso ? 'var(--green)' : 'var(--red)' }}>
                                 {fmtBRL(emb - piso)} ({fmtNum((emb - piso) / piso * 100)}%)
                               </span>
@@ -640,7 +838,7 @@ export default function CalcPage() {
                             )}
                             {embSobra != null && (
                               <div className="emb-row">
-                                <span className="emb-row-lbl">Sobra após diesel</span>
+                                <span className="emb-row-lbl">Sobra após {extrasLbl}</span>
                                 <span className="emb-row-val" style={{ color: embAfogado ? 'var(--red)' : 'var(--cyan)' }}>
                                   {fmtBRL(embSobra)}
                                 </span>
@@ -679,10 +877,10 @@ function ToggleCard({ label, sublabel, value, onChange }) {
   );
 }
 
-function ScenarioCard({ title, subtitle, price, net, basis, totalTax, inss, tp, fuel }) {
-  // Bruto após imposto e diesel — os demais custos (pneu, manutenção,
+function ScenarioCard({ title, subtitle, price, net, basis, totalTax, inss, tp, extras, extrasLbl }) {
+  // Bruto após imposto, diesel e seguro — os demais custos (pneu, manutenção,
   // motorista) já estão modelados dentro do piso, então não entram aqui.
-  const posDiesel = price && fuel ? price * (1 - totalTax) - fuel : null;
+  const posDiesel = price && extras ? price * (1 - totalTax) - extras : null;
   return (
     <div className="margin-scenario">
       <div className="margin-scenario-head">
@@ -719,8 +917,8 @@ function ScenarioCard({ title, subtitle, price, net, basis, totalTax, inss, tp, 
       {posDiesel != null && (
         <div className="margin-fuel-row">
           <span className="margin-fuel-label">
-            Após diesel
-            <span className="margin-fuel-hint">recebido − imp. − {fmtBRL(fuel)}</span>
+            Após {extrasLbl}
+            <span className="margin-fuel-hint">recebido − imp. − {fmtBRL(extras)}</span>
           </span>
           <span className="margin-fuel-val" style={{ color: posDiesel >= 0 ? 'var(--cyan)' : 'var(--red)' }}>
             {fmtBRL(posDiesel)}

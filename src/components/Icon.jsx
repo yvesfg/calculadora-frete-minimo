@@ -15,6 +15,7 @@ const PATHS = {
   raio: <><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>,
   ia: <><circle cx="12" cy="12" r="3"/><path d="M20.188 10.934a8.5 8.5 0 1 0-.122 2.187"/><path d="M20 4v4h-4"/></>,
   combustivel: <><path d="M3 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M2 22h14"/><path d="M6 6h6v4H6z"/><path d="M15 8h2.5a1.5 1.5 0 0 1 1.5 1.5V17a1.5 1.5 0 0 0 3 0v-7l-2.5-2.5"/></>,
+  seguro: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></>,
 };
 
 export default function Icon({ name, size = 18, stroke = "currentColor", width = 1.7, style }) {
