@@ -280,27 +280,58 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 }
 .margin-scenario {
   border: 1px solid var(--border); border-radius: var(--r);
-  overflow: hidden; margin-bottom: 10px;
+  overflow: hidden; margin-bottom: 10px; background: var(--card);
 }
 .margin-scenario-head {
-  display: flex; align-items: center; gap: 6px; padding: 7px 10px;
+  display: flex; align-items: flex-start; gap: 6px; padding: 9px 10px;
   background: rgba(255,255,255,.02); border-bottom: 1px solid var(--border);
   font-size: 10px;
 }
-.margin-scenario-tag { color: var(--text2); flex: 1; }
-.margin-scenario-price { font-weight: 700; font-size: 13px; color: var(--text); }
+.margin-scenario-tag {
+  color: var(--text); flex: 1; font-size: 11px; font-weight: 700;
+  letter-spacing: .2px; display: flex; flex-direction: column; gap: 2px;
+}
+.margin-scenario-sub { font-size: 9.5px; font-weight: 500; color: var(--text2); letter-spacing: 0; }
+.margin-scenario-price {
+  font-weight: 800; font-size: 15px; color: var(--text);
+  font-variant-numeric: tabular-nums; text-align: right;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+}
+/* Cada cenário tem sua cor: markup = âmbar, margem real = ciano */
+.margin-scenario.v-markup { border-color: rgba(252,213,53,.30); }
+.margin-scenario.v-markup .margin-scenario-head {
+  background: linear-gradient(180deg, rgba(252,213,53,.12), rgba(252,213,53,.03));
+  border-bottom-color: rgba(252,213,53,.24);
+}
+.margin-scenario.v-markup .margin-scenario-tag,
+.margin-scenario.v-markup .margin-scenario-price { color: var(--accent); }
+.margin-scenario.v-real { border-color: rgba(6,182,212,.30); }
+.margin-scenario.v-real .margin-scenario-head {
+  background: linear-gradient(180deg, rgba(6,182,212,.12), rgba(6,182,212,.03));
+  border-bottom-color: rgba(6,182,212,.24);
+}
+.margin-scenario.v-real .margin-scenario-tag,
+.margin-scenario.v-real .margin-scenario-price { color: var(--cyan); }
+.margin-per-ton {
+  font-size: 9.5px; font-weight: 600; color: var(--text2);
+  letter-spacing: .2px; font-variant-numeric: tabular-nums;
+}
 .margin-detail-row {
   display: flex; justify-content: space-between; padding: 5px 10px;
   border-bottom: 1px solid var(--border); font-size: 11px;
 }
 .margin-detail-label { color: var(--text2); }
-.margin-detail-val   { font-weight: 600; font-variant-numeric: tabular-nums; }
+.margin-detail-val   { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
 .margin-net-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 7px 10px; border-top: 1px solid var(--border); font-size: 12px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 8px 10px; border-top: 1px solid var(--border2); font-size: 12px;
+  background: rgba(255,255,255,.02);
 }
-.margin-net-label { color: var(--text2); font-weight: 600; }
-.margin-net-val   { font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
+.margin-net-label { color: var(--text); font-weight: 700; }
+.margin-net-val   {
+  font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px; text-align: right;
+}
 .margin-net-pct   { font-size: 10px; margin-left: 4px; }
 .margin-tax-config {
   display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
@@ -439,13 +470,16 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 
 /* Linha "após diesel" nos cenários de margem */
 .margin-fuel-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 6px 10px; border-top: 1px solid var(--border);
-  background: var(--cyan-dim); font-size: 11px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 7px 10px; border-top: 1px solid var(--border);
+  background: rgba(6,182,212,.10); font-size: 11px;
 }
-.margin-fuel-label { color: var(--text2); font-weight: 600; display: flex; flex-direction: column; }
+.margin-fuel-label { color: var(--text); font-weight: 600; display: flex; flex-direction: column; }
 .margin-fuel-hint  { font-size: 9px; color: var(--text3); font-weight: 400; }
-.margin-fuel-val   { font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; }
+.margin-fuel-val   {
+  font-weight: 800; font-size: 13px; font-variant-numeric: tabular-nums;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px; text-align: right;
+}
 
 /* Combustível na planilha (lote) */
 .sheet-fuel-bar {

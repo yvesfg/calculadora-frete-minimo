@@ -651,6 +651,7 @@ export default function CalcPage() {
 
                   <div style={{ padding:'10px 14px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                     <ScenarioCard
+                      variant="markup"
                       title="Markup s/ Piso"
                       subtitle={`${retornoVazio ? 'Custeio (ida+volta)' : 'Piso'} × (1 + ${margin}%)`}
                       price={price1}
@@ -661,8 +662,10 @@ export default function CalcPage() {
                       tp={tp}
                       extras={extras}
                       extrasLbl={extrasLbl}
+                      peso={peso}
                     />
                     <ScenarioCard
+                      variant="real"
                       title="Margem Real"
                       subtitle={`${retornoVazio ? 'Custeio (ida+volta)' : 'Piso'} ÷ (1 − imp − ${margin}%)`}
                       price={price2}
@@ -673,6 +676,7 @@ export default function CalcPage() {
                       tp={tp}
                       extras={extras}
                       extrasLbl={extrasLbl}
+                      peso={peso}
                     />
                   </div>
                 </div>
@@ -877,15 +881,23 @@ function ToggleCard({ label, sublabel, value, onChange }) {
   );
 }
 
-function ScenarioCard({ title, subtitle, price, net, basis, totalTax, inss, tp, extras, extrasLbl }) {
+function ScenarioCard({ variant, title, subtitle, price, net, basis, totalTax, inss, tp, extras, extrasLbl, peso }) {
   // Bruto após imposto, diesel e seguro — os demais custos (pneu, manutenção,
   // motorista) já estão modelados dentro do piso, então não entram aqui.
   const posDiesel = price && extras ? price * (1 - totalTax) - extras : null;
+  // Valor por tonelada: só faz sentido com o peso da carga informado.
+  const porTon = v => (peso > 0 && v != null ? `R$ ${fmtNum(v / peso, 2)}/ton` : null);
   return (
-    <div className="margin-scenario">
+    <div className={`margin-scenario v-${variant || 'markup'}`}>
       <div className="margin-scenario-head">
-        <span className="margin-scenario-tag">{title}<br /><span style={{ color:'var(--text3)', fontSize:9 }}>{subtitle}</span></span>
-        <span className="margin-scenario-price">{fmtBRL(price)}</span>
+        <span className="margin-scenario-tag">
+          {title}
+          <span className="margin-scenario-sub">{subtitle}</span>
+        </span>
+        <span className="margin-scenario-price">
+          {fmtBRL(price)}
+          {porTon(price) && <span className="margin-per-ton">{porTon(price)}</span>}
+        </span>
       </div>
       <div className="margin-detail-row">
         <span className="margin-detail-label">PIS</span>
@@ -906,12 +918,15 @@ function ScenarioCard({ title, subtitle, price, net, basis, totalTax, inss, tp, 
       <div className="margin-net-row">
         <span className="margin-net-label">Líquido</span>
         <span className="margin-net-val" style={{ color: net >= 0 ? 'var(--green)' : 'var(--red)' }}>
-          {fmtBRL(net)}
-          {basis && net != null ? (
-            <span className="margin-net-pct" style={{ color:'var(--text3)' }}>
-              ({fmtNum(net / basis * 100)}%)
-            </span>
-          ) : null}
+          <span>
+            {fmtBRL(net)}
+            {basis && net != null ? (
+              <span className="margin-net-pct" style={{ color:'var(--text3)' }}>
+                ({fmtNum(net / basis * 100)}%)
+              </span>
+            ) : null}
+          </span>
+          {porTon(net) && <span className="margin-per-ton">{porTon(net)}</span>}
         </span>
       </div>
       {posDiesel != null && (
@@ -922,6 +937,7 @@ function ScenarioCard({ title, subtitle, price, net, basis, totalTax, inss, tp, 
           </span>
           <span className="margin-fuel-val" style={{ color: posDiesel >= 0 ? 'var(--cyan)' : 'var(--red)' }}>
             {fmtBRL(posDiesel)}
+            {porTon(posDiesel) && <span className="margin-per-ton">{porTon(posDiesel)}</span>}
           </span>
         </div>
       )}
