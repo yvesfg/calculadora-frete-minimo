@@ -926,7 +926,6 @@ function ScenarioCard({ variant, title, subtitle, price, net, basis, totalTax, i
               </span>
             ) : null}
           </span>
-          {porTon(net) && <span className="margin-per-ton">{porTon(net)}</span>}
         </span>
       </div>
       {posDiesel != null && (
@@ -937,7 +936,6 @@ function ScenarioCard({ variant, title, subtitle, price, net, basis, totalTax, i
           </span>
           <span className="margin-fuel-val" style={{ color: posDiesel >= 0 ? 'var(--cyan)' : 'var(--red)' }}>
             {fmtBRL(posDiesel)}
-            {porTon(posDiesel) && <span className="margin-per-ton">{porTon(posDiesel)}</span>}
           </span>
         </div>
       )}
