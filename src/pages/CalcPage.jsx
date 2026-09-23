@@ -4,7 +4,7 @@ import {
   resolveTable, findRow, calcPiso, fmtBRL, fmtNum,
 } from '../utils/anttData.js';
 import {
-  ANTT_DIESEL_BASE, CONSUMO_VAZIO_FATOR,
+  ANTT_DIESEL_BASE, CONSUMO_VAZIO_FATOR, DIESEL_UF_BASE,
   dieselUF, dieselMeta, buscarPrecosANP, consumoPreset,
   calcCombustivel, calcPisoCorrigido,
 } from '../utils/dieselData.js';
@@ -34,7 +34,11 @@ const LS = {
   preco: 'calc_fuel_preco',
   seg:   'calc_seguro_taxa',
   icms:  'calc_icms_aliq',
+  rota:  'calc_rota_modo',
+  ufKm:  'calc_km_uf',
 };
+
+const UFS = Object.keys(DIESEL_UF_BASE).sort();
 
 export default function CalcPage() {
   const [orig, setOrig]   = useState({ uf:'', city:'' });
@@ -46,6 +50,13 @@ export default function CalcPage() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoErr, setGeoErr]         = useState('');
   const destRef = useRef(null);
+
+  // 'rota' = origem/destino calculam a distância · 'km' = só distância + eixos.
+  // No modo km a UF só serve para o preço do diesel (opcional).
+  const [modoRota, setModoRota] = useState(() => localStorage.getItem(LS.rota) || 'rota');
+  const [ufKm, setUfKm]         = useState(() => localStorage.getItem(LS.ufKm) || '');
+  const soKm = modoRota === 'km';
+  const ufDiesel = soKm ? ufKm : orig.uf;
 
   const [hp, setHp]       = useState(false);
   const [fc, setFc]       = useState(true); // padrão: composição veicular → Tabela A
@@ -139,8 +150,10 @@ export default function CalcPage() {
   useEffect(() => { localStorage.setItem(LS.preco, precoManual); }, [precoManual]);
   useEffect(() => { localStorage.setItem(LS.seg,  taxaSeguro); }, [taxaSeguro]);
   useEffect(() => { localStorage.setItem(LS.icms, icmsAliq);   }, [icmsAliq]);
+  useEffect(() => { localStorage.setItem(LS.rota, modoRota);   }, [modoRota]);
+  useEffect(() => { localStorage.setItem(LS.ufKm, ufKm);       }, [ufKm]);
 
-  const precoRegiao = orig.uf ? dieselUF(orig.uf) : dieselInfo.mediaNacional;
+  const precoRegiao = ufDiesel ? dieselUF(ufDiesel) : dieselInfo.mediaNacional;
   const precoLitro  = precoModo === 'manual' ? num(precoManual) : precoRegiao;
   const kml         = num(kmL);
   const kmlVazio    = num(kmLVazio);
@@ -175,6 +188,7 @@ export default function CalcPage() {
   const embAfogado = embSobra != null && row && embSobra < row[IDX.CC];
 
   const lookupRoutes = useCallback(async () => {
+    if (soKm) return;
     if (!orig.uf || !orig.city || !dest.uf || !dest.city) return;
     setGeoLoading(true); setGeoErr('');
     try {
@@ -188,7 +202,7 @@ export default function CalcPage() {
     } finally {
       setGeoLoading(false);
     }
-  }, [orig, dest]);
+  }, [orig, dest, soKm]);
 
   useEffect(() => { lookupRoutes(); }, [lookupRoutes]);
 
@@ -203,12 +217,36 @@ export default function CalcPage() {
           <div className="card">
             <div className="card-head">
               <div className="card-head-icon"><Icon name="rota" stroke="var(--accent)" size={17} /></div>
-              <div>
+              <div style={{ flex:1 }}>
                 <div className="card-head-title">Rota</div>
-                <div className="card-head-sub">Origem → Destino</div>
+                <div className="card-head-sub">{soKm ? 'Distância informada' : 'Origem → Destino'}</div>
+              </div>
+              <div className="fuel-modo-pills">
+                <button
+                  className={`tax-pill${!soKm ? ' active' : ''}`}
+                  onClick={() => setModoRota('rota')}
+                >Origem/Destino</button>
+                <button
+                  className={`tax-pill${soKm ? ' active' : ''}`}
+                  onClick={() => { setModoRota('km'); setGeoErr(''); if (!ufKm && orig.uf) setUfKm(orig.uf); }}
+                >Só km</button>
               </div>
             </div>
             <div className="card-body">
+              {soKm ? (
+                <div className="dist-badge" style={{ marginTop:0 }}>
+                  <span style={{ color:'var(--text3)' }}>UF do diesel</span>
+                  <select
+                    value={ufKm}
+                    onChange={e => setUfKm(e.target.value)}
+                    style={{ width:90 }}
+                  >
+                    <option value="">Brasil</option>
+                    {UFS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                  </select>
+                  <span className="fuel-tag">opcional · média do estado</span>
+                </div>
+              ) : (<>
               <div style={{ position:'relative', paddingLeft:18, marginBottom:10 }}>
                 <div className="route-line" />
                 <div style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:10 }}>
@@ -255,6 +293,7 @@ export default function CalcPage() {
                   ))}
                 </div>
               )}
+              </>)}
 
               <div className="dist-badge">
                 <span style={{ fontSize:12 }}>📏</span>
@@ -264,9 +303,10 @@ export default function CalcPage() {
                   onChange={e => { setDistKm(e.target.value); setManualDist(true); }}
                   style={{ width:80, textAlign:'center', fontWeight:700, color:'var(--accent)' }}
                   placeholder="0"
+                  autoFocus={soKm}
                 />
                 <span style={{ color:'var(--text3)' }}>km</span>
-                {manualDist && <span style={{ fontSize:9, color:'var(--text3)', marginLeft:'auto' }}>manual</span>}
+                {manualDist && !soKm && <span style={{ fontSize:9, color:'var(--text3)', marginLeft:'auto' }}>manual</span>}
               </div>
             </div>
           </div>
@@ -423,7 +463,7 @@ export default function CalcPage() {
                 <span style={{ color:'var(--text3)' }}>/litro</span>
                 {precoModo === 'regiao' && (
                   <span className="fuel-tag">
-                    {orig.uf || 'Brasil'} · ANP {diaMes(dieselInfo.semanaFim)}
+                    {ufDiesel || 'Brasil'} · ANP {diaMes(dieselInfo.semanaFim)}
                     {dieselInfo.aoVivo && <span className="fuel-live">ao vivo</span>}
                   </span>
                 )}
@@ -440,8 +480,10 @@ export default function CalcPage() {
                 </div>
               )}
 
-              {precoModo === 'regiao' && !orig.uf && (
-                <div className="fuel-hint">Informe a origem para usar a média do estado.</div>
+              {precoModo === 'regiao' && !ufDiesel && (
+                <div className="fuel-hint">
+                  {soKm ? 'Escolha a UF do diesel no cartão Rota' : 'Informe a origem'} para usar a média do estado.
+                </div>
               )}
               {precoModo === 'regiao' && dieselInfo.idadeDias > 21 && (
                 <div className="fuel-hint warn">

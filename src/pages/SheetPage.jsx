@@ -11,21 +11,36 @@ const DEFAULT_FC      = false;
 
 const num = v => parseFloat(String(v).replace(',', '.')) || 0;
 
+const temRota = r => /^[A-Za-z]{2}$/.test(r.uf_orig) && r.city_orig && /^[A-Za-z]{2}$/.test(r.uf_dest) && r.city_dest;
+
 function parseSheet(text) {
   const lines = text.trim().split('\n');
   return lines.map(line => {
-    const cols = line.split(/[\t;,]/).map(c => c.trim());
+    // Vírgula não separa coluna aqui: a distância pode vir "1.234,5" ou "850,5".
+    const cols = line.split(/[\t;]/).length > 1
+      ? line.split(/[\t;]/).map(c => c.trim())
+      : line.split(',').map(c => c.trim());
+    // Linha "só km": Distância  Eixos*  TipoCarga* — sem origem/destino.
+    if (/^\d/.test(cols[0] || '')) {
+      return {
+        uf_orig: '', city_orig: '', uf_dest: '', city_dest: '',
+        dist_km: num(String(cols[0]).replace(/\.(?=\d{3}(\D|$))/g, '')),
+        axles:   parseInt(cols[1]) || DEFAULT_AXLES,
+        cargo:   cols[2]           || DEFAULT_CARGO,
+      };
+    }
     return {
       uf_orig:  cols[0] || '',
       city_orig: cols[1] || '',
       uf_dest:  cols[2] || '',
       city_dest: cols[3] || '',
-      dist_km:  parseFloat(cols[4]) || 0,
+      dist_km:  num(String(cols[4] || '').replace(/\.(?=\d{3}(\D|$))/g, '')),
       axles:    parseInt(cols[5])   || DEFAULT_AXLES,
       cargo:    cols[6]             || DEFAULT_CARGO,
     };
   // UF sempre 2 letras — descarta cabeçalho e linhas inválidas automaticamente.
-  }).filter(r => /^[A-Za-z]{2}$/.test(r.uf_orig) && r.city_orig && /^[A-Za-z]{2}$/.test(r.uf_dest) && r.city_dest);
+  // Sem rota, a linha vale se trouxer a distância.
+  }).filter(r => temRota(r) || r.dist_km > 0);
 }
 
 // Converte as linhas extraídas pela IA / Excel no mesmo CSV que o textarea entende.
@@ -232,6 +247,7 @@ export default function SheetPage() {
     const exemplos = [
       'MA;Imperatriz;PA;Belem;;5;carga_geral',
       'MA;Acailandia;MA;Sao Luis;;6;granel_solido',
+      ';;;;850;6;granel_solido',
     ];
     const blob = new Blob(['﻿' + [header, ...exemplos].join('\r\n')], { type:'text/csv;charset=utf-8' });
     const a = document.createElement('a');
@@ -288,7 +304,7 @@ export default function SheetPage() {
                 color:'var(--text)', fontFamily:'var(--font)', fontSize:12,
                 resize:'vertical', outline:'none',
               }}
-              placeholder={`Arraste um arquivo aqui (foto, PDF, Excel ou CSV), cole o conteúdo, ou clique em "Enviar arquivo".\n\nColunas: UF_orig  Cidade_orig  UF_dest  Cidade_dest  Distância(km)*  Eixos*  TipoCarga*\n* opcionais — distância calculada via OSRM se omitida`}
+              placeholder={`Arraste um arquivo aqui (foto, PDF, Excel ou CSV), cole o conteúdo, ou clique em "Enviar arquivo".\n\nColunas: UF_orig  Cidade_orig  UF_dest  Cidade_dest  Distância(km)*  Eixos*  TipoCarga*\n* opcionais — distância calculada via OSRM se omitida\n\nSó km: Distância(km)  Eixos*  TipoCarga*   (ex.: 850;6;granel_solido)`}
             />
           </div>
 
@@ -391,14 +407,20 @@ export default function SheetPage() {
               <tbody>
                 {rowsFuel.map((r, i) => (
                   <tr key={i}>
-                    <td>
-                      <span className="td-uf">{r.uf_orig}</span>
-                      <span className="td-cidade"> {r.city_orig}</span>
-                    </td>
-                    <td>
-                      <span className="td-uf">{r.uf_dest}</span>
-                      <span className="td-cidade"> {r.city_dest}</span>
-                    </td>
+                    {temRota(r) ? (
+                      <>
+                        <td>
+                          <span className="td-uf">{r.uf_orig}</span>
+                          <span className="td-cidade"> {r.city_orig}</span>
+                        </td>
+                        <td>
+                          <span className="td-uf">{r.uf_dest}</span>
+                          <span className="td-cidade"> {r.city_dest}</span>
+                        </td>
+                      </>
+                    ) : (
+                      <td colSpan={2}><span className="td-empty">Só distância</span></td>
+                    )}
                     <td className="td-num">{r.km ? `${r.km.toLocaleString('pt-BR')} km` : '—'}</td>
                     <td className="td-num">{r.axles}</td>
                     <td className="td-num" style={{ fontWeight:700, color:'var(--accent)' }}>{r.tbl}</td>
@@ -436,7 +458,7 @@ export default function SheetPage() {
       <div className="footer-note">
         Formato: colunas separadas por tab, ponto-e-vírgula ou vírgula. Cabeçalho opcional (ignorado automaticamente).
         Fotos, prints e PDFs de cotação são lidos por IA; Excel é convertido para linhas.
-        Distância calculada via OSRM quando omitida. Eixos padrão: {DEFAULT_AXLES}. Carga padrão: {CARGO_LBL[DEFAULT_CARGO]}.
+        Distância calculada via OSRM quando omitida; sem origem/destino, basta a distância (diesel pela média nacional). Eixos padrão: {DEFAULT_AXLES}. Carga padrão: {CARGO_LBL[DEFAULT_CARGO]}.
       </div>
     </div>
   );
