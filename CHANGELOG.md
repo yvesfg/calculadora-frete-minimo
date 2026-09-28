@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-09-28 — Base ANTT geral (Supabase)
+
+**Solicitado:** a atualização da base valer para todos, não só para o navegador de quem clicou.
+
+**Implementado:**
+- Tabela Supabase `frete_antt_base` (`ativa` / `backup`); anon lê/grava, DELETE bloqueado (padrão `co_config`).
+- `src/utils/anttStore.js` — store Supabase (reusa `supaFetch`, import dinâmico).
+- `anttUpdate.js` — aplicar/voltar/backup gravam no store compartilhado; `sincronizarBase` lê a base geral (inválida → embutida). localStorage virou só cache.
+- `main.jsx` — sincroniza a base geral antes do 1º render (espera até 3 s).
+- Testes: 15 (inclui "outro usuário recebe a nova base" e falha de gravação).
+
 ## 2026-09-28 — Atualizar base ANTT pela nova resolução
 
 **Solicitado:** botão "Atualizar base" na aba Tabelas ANTT quando o aviso detecta nova resolução; backup da base atual; download dos coeficientes no portal oficial (via servidor por CORS); validação completa (tabelas A–D × eixos × cargas) abortando sem mexer na base; gravar a resolução ativa e sumir o aviso; botão para voltar à anterior; testes.

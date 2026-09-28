@@ -11,7 +11,7 @@ globalThis.localStorage = {
 const { RAW, IDX, ANTT_SOURCE, TBL_AXLES, CARGO_LBL, findRow } = await import('./anttData.js');
 const {
   RAW_EMBUTIDA, SOURCE_EMBUTIDA, parseResolucaoHtml, validarCoeficientes, cargoDoTexto,
-  aplicarResolucao, voltarResolucaoAnterior, temBackup, carregarBaseAtiva, dataDaResolucao,
+  aplicarResolucao, voltarResolucaoAnterior, backupInfo, carregarBaseAtiva, sincronizarBase, dataDaResolucao,
 } = await import('./anttUpdate.js');
 
 const NOME = {
@@ -111,47 +111,86 @@ describe('parseResolucaoHtml + validarCoeficientes', () => {
   });
 });
 
+// Store em memória = tabela frete_antt_base (compartilhada entre usuários).
+const novoStore = () => {
+  const db = new Map();
+  return { db, async ler(id) { return db.get(id) ?? null; }, async gravar(id, v) { db.set(id, JSON.parse(JSON.stringify(v))); } };
+};
+const simulaOutroUsuario = () => { // outro navegador: memória e cache zerados
+  mem.clear();
+  RAW.splice(0, RAW.length, ...RAW_EMBUTIDA.map(r => [...r]));
+  Object.assign(ANTT_SOURCE, SOURCE_EMBUTIDA);
+};
+
 describe('aplicarResolucao / voltarResolucaoAnterior', () => {
-  it('substitui os coeficientes, grava a resolução ativa e faz backup da anterior', () => {
+  it('substitui os coeficientes, grava a resolução ativa e faz backup da anterior', async () => {
+    const st = novoStore();
     const antes = findRow('A', 'granel_solido', 2)[IDX.CCD];
-    aplicarResolucao(NOVAS, META);
+    await aplicarResolucao(NOVAS, META, st);
     expect(findRow('A', 'granel_solido', 2)[IDX.CCD]).toBe(NOVAS[0][IDX.CCD]);
     expect(findRow('A', 'granel_solido', 2)[IDX.CCD]).not.toBe(antes);
     expect(ANTT_SOURCE.resolucao).toBe('Res. ANTT 6.085/2026');
     expect(ANTT_SOURCE.vigor).toBe('set/2026');
     expect(ANTT_SOURCE.url).toContain('numeroAto=00006085');
-    expect(temBackup()).toBe(true);
-    expect(JSON.parse(mem.get('antt_base_backup')).rows).toEqual(RAW_EMBUTIDA);
+    expect(st.db.get('ativa').rows).toEqual(NOVAS);
+    expect(st.db.get('backup').rows).toEqual(RAW_EMBUTIDA);
+    expect(await backupInfo(st)).toMatchObject({ resolucao: SOURCE_EMBUTIDA.resolucao });
   });
 
-  it('dados incompletos: lança erro e mantém a base anterior intacta', () => {
+  it('dados incompletos: lança erro e mantém a base anterior intacta', async () => {
+    const st = novoStore();
     const incompletas = NOVAS.filter(r => !(r[IDX.TBL] === 'B' && r[IDX.AXLES] === 6));
-    expect(() => aplicarResolucao(incompletas, META)).toThrow(/dados incompletos/);
+    await expect(aplicarResolucao(incompletas, META, st)).rejects.toThrow(/dados incompletos/);
     expect(RAW).toEqual(RAW_EMBUTIDA);
     expect(ANTT_SOURCE.resolucao).toBe(SOURCE_EMBUTIDA.resolucao);
-    expect(mem.size).toBe(0); // nem backup nem base ativa gravados
+    expect(st.db.size).toBe(0); // nem backup nem base ativa gravados
   });
 
-  it('reaplica a base ativa ao recarregar o app', () => {
-    aplicarResolucao(NOVAS, META);
-    RAW.splice(0, RAW.length, ...RAW_EMBUTIDA.map(r => [...r])); // simula reload
-    Object.assign(ANTT_SOURCE, SOURCE_EMBUTIDA);
-    expect(carregarBaseAtiva()).toBe(true);
+  it('falha ao gravar no store: base em uso não muda', async () => {
+    const st = { async ler() { return null; }, async gravar() { throw new Error('offline'); } };
+    await expect(aplicarResolucao(NOVAS, META, st)).rejects.toThrow(/offline/);
+    expect(RAW).toEqual(RAW_EMBUTIDA);
+  });
+
+  it('é geral: outro usuário sincroniza e recebe a nova base', async () => {
+    const st = novoStore();
+    await aplicarResolucao(NOVAS, META, st);
+    simulaOutroUsuario();
+    expect(RAW).toEqual(RAW_EMBUTIDA);
+    await sincronizarBase(st);
     expect(RAW).toEqual(NOVAS);
     expect(ANTT_SOURCE.resolucao).toBe('Res. ANTT 6.085/2026');
   });
 
-  it('volta para a resolução anterior usando o backup', () => {
-    aplicarResolucao(NOVAS, META);
-    voltarResolucaoAnterior();
+  it('store com dado inválido: sincroniza para a base embutida', async () => {
+    const st = novoStore();
+    st.db.set('ativa', { rows: NOVAS.slice(0, 10), source: { resolucao: 'x' } });
+    await sincronizarBase(st);
     expect(RAW).toEqual(RAW_EMBUTIDA);
-    expect(ANTT_SOURCE.resolucao).toBe(SOURCE_EMBUTIDA.resolucao);
-    expect(mem.has('antt_base_ativa')).toBe(false);
-    expect(temBackup()).toBe(false);
   });
 
-  it('voltar sem backup falha sem mexer na base', () => {
-    expect(() => voltarResolucaoAnterior()).toThrow(/backup/);
+  it('cache local reaplica a última base antes do 1º render', async () => {
+    await aplicarResolucao(NOVAS, META, novoStore());
+    RAW.splice(0, RAW.length, ...RAW_EMBUTIDA.map(r => [...r])); // reload, mesmo navegador
+    Object.assign(ANTT_SOURCE, SOURCE_EMBUTIDA);
+    expect(carregarBaseAtiva()).toBe(true);
+    expect(RAW).toEqual(NOVAS);
+  });
+
+  it('volta (para todos) para a resolução anterior usando o backup', async () => {
+    const st = novoStore();
+    await aplicarResolucao(NOVAS, META, st);
+    await voltarResolucaoAnterior(st);
+    expect(RAW).toEqual(RAW_EMBUTIDA);
+    expect(ANTT_SOURCE.resolucao).toBe(SOURCE_EMBUTIDA.resolucao);
+    expect(await backupInfo(st)).toBeNull();
+    simulaOutroUsuario();
+    await sincronizarBase(st);
+    expect(RAW).toEqual(RAW_EMBUTIDA);
+  });
+
+  it('voltar sem backup falha sem mexer na base', async () => {
+    await expect(voltarResolucaoAnterior(novoStore())).rejects.toThrow(/backup/);
     expect(RAW).toEqual(RAW_EMBUTIDA);
   });
 });
