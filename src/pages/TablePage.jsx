@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Dropdown from '../components/Dropdown.jsx';
 import { RAW, IDX, CARGO_LBL, CARGO_SECS, TBL_AXLES, TBL_DESCS, ANTT_SOURCE, fmtNum } from '../utils/anttData.js';
+import { atualizarBase, voltarResolucaoAnterior, backupInfo } from '../utils/anttUpdate.js';
 
 const TABLES = ['A','B','C','D'];
 
@@ -10,6 +11,8 @@ export default function TablePage() {
   const [hl, setHl]       = useState(null); // highlight axles
   const [axleFilter, setAxleFilter] = useState(null); // null = todos
   const [check, setCheck] = useState({ status: 'idle' }); // idle|loading|uptodate|newer|error
+  const [upd, setUpd]     = useState({ status: 'idle' }); // idle|loading|done|error (atualizar/voltar base)
+  const backup = backupInfo();
 
   // Nº e ano da resolução-base (ex.: 'Res. ANTT 6.084/2026' → 6084 / 2026)
   const baseNum = parseInt((ANTT_SOURCE.resolucao.match(/(\d[\d.]*)\/\d{4}/)?.[1] || '6084').replace(/\D/g, ''), 10);
@@ -25,6 +28,28 @@ export default function TablePage() {
       setCheck(d.newer ? { status: 'newer', latest: d.latest } : { status: 'uptodate' });
     } catch {
       setCheck({ status: 'error' });
+    }
+  };
+
+  // Troca RAW/ANTT_SOURCE in-place; o setState força o re-render com a nova base.
+  const atualizar = async () => {
+    setUpd({ status: 'loading' });
+    try {
+      const src = await atualizarBase(check.latest, baseAno);
+      setUpd({ status: 'done', msg: `Base atualizada para ${src.resolucao}` });
+      setCheck({ status: 'idle' }); // nova base = mais recente conhecida: some o aviso
+    } catch (e) {
+      setUpd({ status: 'error', msg: e.message, erros: e.erros || [] });
+    }
+  };
+
+  const voltar = () => {
+    try {
+      const src = voltarResolucaoAnterior();
+      setUpd({ status: 'done', msg: `Voltou para ${src.resolucao}` });
+      setCheck({ status: 'idle' });
+    } catch (e) {
+      setUpd({ status: 'error', msg: e.message, erros: [] });
     }
   };
 
@@ -62,11 +87,30 @@ export default function TablePage() {
           </button>
           <span className="tbl-update-check-sub">
             {check.status==='newer'
-              ? <>Atualizar base · <a href={resLink(check.latest)} target="_blank" rel="noreferrer">ver Res. {fmtRes(check.latest)}</a></>
+              ? <>
+                  <button type="button" className="fuel-anp-btn" onClick={atualizar} disabled={upd.status==='loading'}>
+                    {upd.status==='loading' ? '⏳ Atualizando…' : 'Atualizar base'}
+                  </button>
+                  {' · '}<a href={resLink(check.latest)} target="_blank" rel="noreferrer">ver Res. {fmtRes(check.latest)}</a>
+                </>
               : <>Base: {ANTT_SOURCE.resolucao} · vigor {ANTT_SOURCE.vigor} · <a href={ANTT_SOURCE.url} target="_blank" rel="noreferrer">portaria oficial</a></>}
+            {backup && (
+              <>{' · '}<button type="button" className="fuel-anp-btn" onClick={voltar}>
+                ↩ Voltar para {backup.resolucao}
+              </button></>
+            )}
           </span>
         </div>
       </div>
+      {upd.status==='done' && <p className="fuel-anp-msg" style={{ marginBottom:8 }}>✅ {upd.msg}</p>}
+      {upd.status==='error' && (
+        <div className="fuel-anp-msg err" style={{ marginBottom:8 }}>
+          ❌ Base não alterada: {upd.msg}
+          {upd.erros?.length > 0 && (
+            <ul style={{ marginLeft:18 }}>{upd.erros.slice(0, 8).map(e => <li key={e}>{e}</li>)}{upd.erros.length > 8 && <li>… +{upd.erros.length - 8}</li>}</ul>
+          )}
+        </div>
+      )}
       <p className="tbl-desc">{TBL_DESCS[tbl]}</p>
 
       {/* Filtros: Eixos + Tipo de carga (dropdowns no lugar das pills) */}
