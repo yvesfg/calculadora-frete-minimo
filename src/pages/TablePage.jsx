@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Dropdown from '../components/Dropdown.jsx';
 import { RAW, IDX, CARGO_LBL, CARGO_SECS, TBL_AXLES, TBL_DESCS, ANTT_SOURCE, fmtNum } from '../utils/anttData.js';
 import { atualizarBase, voltarResolucaoAnterior, backupInfo } from '../utils/anttUpdate.js';
+import { storeSupabase } from '../utils/anttStore.js';
 
 const TABLES = ['A','B','C','D'];
 
@@ -12,7 +13,10 @@ export default function TablePage() {
   const [axleFilter, setAxleFilter] = useState(null); // null = todos
   const [check, setCheck] = useState({ status: 'idle' }); // idle|loading|uptodate|newer|error
   const [upd, setUpd]     = useState({ status: 'idle' }); // idle|loading|done|error (atualizar/voltar base)
-  const backup = backupInfo();
+  const [backup, setBackup] = useState(null); // resolução guardada no backup geral
+
+  // A base geral já foi sincronizada no main.jsx; aqui só o backup (p/ "Voltar").
+  useEffect(() => { backupInfo(storeSupabase).then(setBackup).catch(() => {}); }, []);
 
   // Nº e ano da resolução-base (ex.: 'Res. ANTT 6.084/2026' → 6084 / 2026)
   const baseNum = parseInt((ANTT_SOURCE.resolucao.match(/(\d[\d.]*)\/\d{4}/)?.[1] || '6084').replace(/\D/g, ''), 10);
@@ -35,7 +39,8 @@ export default function TablePage() {
   const atualizar = async () => {
     setUpd({ status: 'loading' });
     try {
-      const src = await atualizarBase(check.latest, baseAno);
+      const src = await atualizarBase(check.latest, baseAno, storeSupabase);
+      setBackup(await backupInfo(storeSupabase));
       setUpd({ status: 'done', msg: `Base atualizada para ${src.resolucao}` });
       setCheck({ status: 'idle' }); // nova base = mais recente conhecida: some o aviso
     } catch (e) {
@@ -43,9 +48,10 @@ export default function TablePage() {
     }
   };
 
-  const voltar = () => {
+  const voltar = async () => {
     try {
-      const src = voltarResolucaoAnterior();
+      const src = await voltarResolucaoAnterior(storeSupabase);
+      setBackup(null);
       setUpd({ status: 'done', msg: `Voltou para ${src.resolucao}` });
       setCheck({ status: 'idle' });
     } catch (e) {

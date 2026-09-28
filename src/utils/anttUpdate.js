@@ -6,7 +6,8 @@
 
      1. BASE EMBUTIDA — RAW/ANTT_SOURCE em anttData.js.
      2. BASE ATIVA   — o botão "Atualizar base" chama
-        /api/antt-coeficientes, valida e grava em localStorage.
+        /api/antt-coeficientes, valida e grava no Supabase
+        (frete_antt_base) — vale para todos os usuários.
         Ao subir o app ela é reaplicada sobre RAW (in-place, para
         findRow/CalcPage/SheetPage continuarem funcionando sem mudança).
 
@@ -21,9 +22,6 @@ import { RAW, IDX, ANTT_SOURCE } from './anttData.js';
 // Cópias imutáveis da base embutida — referência de estrutura e fallback.
 export const RAW_EMBUTIDA = RAW.map(r => [...r]);
 export const SOURCE_EMBUTIDA = { ...ANTT_SOURCE };
-
-const LS_ATIVA  = 'antt_base_ativa';
-const LS_BACKUP = 'antt_base_backup';
 
 export const PORTAL = 'https://anttlegis.antt.gov.br/action/ActionDatalegis.php';
 export function resUrl(numero, ano) {
@@ -172,11 +170,22 @@ export function validarCoeficientes(novas, ref = RAW_EMBUTIDA) {
   return { ok: erros.length === 0, erros, rows: erros.length ? [] : rows };
 }
 
-/* ── Aplicar / voltar (localStorage) ─────────────────────── */
+/* ── Aplicar / voltar ────────────────────────────────────
+   A base é GERAL: fica num "store" compartilhado (Supabase no app,
+   ver anttStore.js). O localStorage é só cache para o 1º render.
+   Store: { ler(id) → {rows, source}|null, gravar(id, {rows, source}) },
+   ids 'ativa' e 'backup'; backup com rows null = sem backup. */
 
+const LS_CACHE = 'antt_base_ativa';
 const ls = () => { try { return globalThis.localStorage || null; } catch { return null; } };
-const ler = k => { try { const v = ls()?.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } };
-const gravar = (k, v) => ls()?.setItem(k, JSON.stringify(v)); // erro de quota sobe: não aplicar pela metade
+const cacheLer = () => { try { const v = ls()?.getItem(LS_CACHE); return v ? JSON.parse(v) : null; } catch { return null; } };
+const cacheGravar = v => { try { v ? ls()?.setItem(LS_CACHE, JSON.stringify(v)) : ls()?.removeItem(LS_CACHE); } catch { /* cache é opcional */ } };
+
+/** Store local (testes / fallback): mesmo contrato do Supabase. */
+export const storeLocal = {
+  async ler(id) { try { const v = ls()?.getItem(`antt_store_${id}`); return v ? JSON.parse(v) : null; } catch { return null; } },
+  async gravar(id, v) { ls()?.setItem(`antt_store_${id}`, JSON.stringify(v)); },
+};
 
 function aplicarNaMemoria(rows, source) {
   RAW.splice(0, RAW.length, ...rows.map(r => [...r]));
@@ -184,12 +193,14 @@ function aplicarNaMemoria(rows, source) {
 }
 
 const fotoAtual = () => ({ rows: RAW.map(r => [...r]), source: { ...ANTT_SOURCE } });
+const valida = b => !!(b?.source && b?.rows && validarCoeficientes(b.rows).ok);
 
 /**
- * Substitui os coeficientes pela nova resolução. Valida antes; se falhar,
- * lança erro e nada muda. O backup da base vigente é gravado primeiro.
+ * Substitui os coeficientes pela nova resolução (para todos). Valida antes;
+ * se falhar — validação ou gravação — lança erro e a base em uso não muda.
+ * O backup da base vigente é gravado primeiro.
  */
-export function aplicarResolucao(novas, { numero, ano, vigor }) {
+export async function aplicarResolucao(novas, { numero, ano, vigor }, store = storeLocal) {
   const v = validarCoeficientes(novas);
   if (!v.ok) {
     const e = new Error(`dados incompletos: ${v.erros.length} problema(s) — ${v.erros.slice(0, 3).join('; ')}`);
@@ -202,38 +213,54 @@ export function aplicarResolucao(novas, { numero, ano, vigor }) {
     vigor: vigor || ANTT_SOURCE.vigor,
     url: resUrl(numero, ano),
   };
-  gravar(LS_BACKUP, { ...fotoAtual(), salvoEm: new Date().toISOString() });
-  gravar(LS_ATIVA, { rows: v.rows, source, aplicadoEm: new Date().toISOString() });
+  const ativa = { rows: v.rows, source };
+  await store.gravar('backup', fotoAtual());
+  await store.gravar('ativa', ativa);
   aplicarNaMemoria(v.rows, source);
+  cacheGravar(ativa);
   return source;
 }
 
-export function temBackup() { return !!ler(LS_BACKUP); }
-export function backupInfo() { return ler(LS_BACKUP)?.source || null; }
+/** Resolução guardada no backup (null se não houver). */
+export async function backupInfo(store = storeLocal) {
+  const b = await store.ler('backup');
+  return valida(b) ? b.source : null;
+}
 
-/** Volta para a base guardada no backup. */
-export function voltarResolucaoAnterior() {
-  const b = ler(LS_BACKUP);
-  if (!b || !validarCoeficientes(b.rows).ok) throw new Error('backup ausente ou corrompido');
-  const embutida = b.source?.resolucao === SOURCE_EMBUTIDA.resolucao;
-  if (embutida) ls()?.removeItem(LS_ATIVA);
-  else gravar(LS_ATIVA, { rows: b.rows, source: b.source, aplicadoEm: new Date().toISOString() });
-  ls()?.removeItem(LS_BACKUP);
+/** Volta (para todos) para a base guardada no backup. */
+export async function voltarResolucaoAnterior(store = storeLocal) {
+  const b = await store.ler('backup');
+  if (!valida(b)) throw new Error('backup ausente ou corrompido');
+  await store.gravar('ativa', { rows: b.rows, source: b.source });
+  await store.gravar('backup', { rows: null, source: null });
   aplicarNaMemoria(b.rows, b.source);
+  cacheGravar(b);
   return b.source;
 }
 
-/** Reaplica a base ativa gravada (chamado ao carregar o módulo). */
+/** Cache local → memória, síncrono, antes do 1º render. */
 export function carregarBaseAtiva() {
-  const a = ler(LS_ATIVA);
-  if (!a?.source || !validarCoeficientes(a.rows).ok) return false;
+  const a = cacheLer();
+  if (!valida(a)) return false;
   aplicarNaMemoria(a.rows, a.source);
   return true;
 }
 carregarBaseAtiva();
 
+/**
+ * Lê a base geral do store e aplica. Sem registro válido → base embutida.
+ * Falha de rede → mantém o que está (cache ou embutida) e relança o erro.
+ */
+export async function sincronizarBase(store = storeLocal) {
+  const a = await store.ler('ativa');
+  const alvo = valida(a) ? a : { rows: RAW_EMBUTIDA, source: SOURCE_EMBUTIDA };
+  aplicarNaMemoria(alvo.rows, alvo.source);
+  cacheGravar(valida(a) ? a : null);
+  return alvo.source;
+}
+
 /** Busca e aplica a resolução via serverless (CORS impede no navegador). */
-export async function atualizarBase(numero, ano) {
+export async function atualizarBase(numero, ano, store = storeLocal) {
   const r = await fetch(`/api/antt-coeficientes?numero=${numero}&ano=${ano}`, { headers: { Accept: 'application/json' } });
   if (!(r.headers.get('content-type') || '').includes('application/json')) {
     throw new Error('endpoint indisponível (só responde no deploy)');
@@ -245,5 +272,5 @@ export async function atualizarBase(numero, ano) {
     throw e;
   }
   if (!j?.rows) throw new Error('resposta ilegível');
-  return aplicarResolucao(j.rows, { numero, ano, vigor: j.vigor });
+  return aplicarResolucao(j.rows, { numero, ano, vigor: j.vigor }, store);
 }
