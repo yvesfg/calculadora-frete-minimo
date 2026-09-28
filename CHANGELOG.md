@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-28 — Filtro por base/permissão nas demais funções de frete (Supabase)
+
+**Solicitado:** aplicar o mesmo filtro nas outras funções que alteram fretes.
+
+**Implementado (só banco):**
+- Backup das 7 definições em `_backup_funcoes_20260928`.
+- Guard `_frete_guard(token, id)`: sessão (marca autor p/ auditoria) + admin ou `perms.editar` + base do registro permitida.
+- Aplicado no início de `excluir_frete`, `patch_frete`, `marcar_transbordo_frete`, `limpar_transbordo_frete`, `vincular_contrato_frete`, `definir_competencia_frete` e `vincular_cte` (este também confere o CTe de referência). Corpos das funções intactos. `editar_frete` já era só admin.
+- Testado em transação desfeita: todas negam outra base e sem `perms.editar`; própria base e admin funcionam; alterações aparecem na `auditoria` com o autor.
+
 ## 2026-09-28 — Permissões liberadas + auditoria (Supabase)
 
 **Solicitado:** liberar importar/editar para todos os operadores; auditoria de quem alterou o quê e quando, visível só para o admin.
