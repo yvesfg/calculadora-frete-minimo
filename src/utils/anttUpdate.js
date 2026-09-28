@@ -133,6 +133,38 @@ export function dataDaResolucao(html) {
   return m ? `${m[1].slice(0, 3)}/${m[2]}` : null; // slice(0,3) já dá jan, fev, mar…
 }
 
+/**
+ * Ementa da resolução ("Dispõe sobre…"/"Atualiza…"): texto entre o último título
+ * "RESOLUÇÃO … Nº x, DE …" e "A Diretoria Colegiada…/resolve". null se não achar.
+ */
+export function ementaDoHtml(html) {
+  const t = String(html)
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, '')
+    .replace(/<[^>]+>/g, ' ');
+  const txt = decodeEnt(t).replace(/\s+/g, ' ');
+  const fim = txt.search(/a diretoria colegiada|,?\s*resolve\s*:/i);
+  if (fim < 0) return null;
+  const antes = txt.slice(0, fim);
+  // \S tolera acento corrompido (página ISO-8859-1 lida como UTF-8 no antt-check).
+  const titulos = [...antes.matchAll(/resolu\S{1,4}o\s+(?:antt\s+)?n\S{0,2}\s*[\d.]+\s*,\s*de\s+\d{1,2}\S?\s+de\s+\S+\s+de\s+\d{4}/gi)];
+  if (!titulos.length) return null;
+  const ult = titulos[titulos.length - 1];
+  const ementa = antes.slice(ult.index + ult[0].length).trim();
+  return ementa && ementa.length < 1000 ? ementa : null;
+}
+
+/**
+ * A resolução trata do piso mínimo de frete? Decide pela EMENTA — o corpo de
+ * outras resoluções pode citar "coeficientes dos pisos mínimos" de passagem
+ * (ex.: Res. 6.085/2026, estrutura organizacional). Sem ementa legível,
+ * cai na busca no texto todo (prefere falso aviso a perder uma resolução).
+ */
+export function ehResolucaoDoPiso(html) {
+  const ementa = ementaDoHtml(html);
+  if (ementa) return /piso|frete|5\.?867|coeficiente/i.test(ementa);
+  return /5\.?867|Coeficiente|piso\s*m[íi]nimo/i.test(String(html));
+}
+
 /* ── Validação ───────────────────────────────────────────── */
 
 const FAIXA = [0.5, 2]; // novo/anterior aceitável — pega coluna trocada ou CCD↔CC

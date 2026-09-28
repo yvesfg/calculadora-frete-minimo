@@ -12,6 +12,7 @@ const { RAW, IDX, ANTT_SOURCE, TBL_AXLES, CARGO_LBL, findRow } = await import('.
 const {
   RAW_EMBUTIDA, SOURCE_EMBUTIDA, parseResolucaoHtml, validarCoeficientes, cargoDoTexto,
   aplicarResolucao, voltarResolucaoAnterior, backupInfo, carregarBaseAtiva, sincronizarBase, dataDaResolucao,
+  ementaDoHtml, ehResolucaoDoPiso,
 } = await import('./anttUpdate.js');
 
 const NOME = {
@@ -220,5 +221,27 @@ describe('aplicarResolucao / voltarResolucaoAnterior', () => {
   it('voltar sem backup falha sem mexer na base', async () => {
     await expect(voltarResolucaoAnterior(novoStore())).rejects.toThrow(/backup/);
     expect(RAW).toEqual(RAW_EMBUTIDA);
+  });
+});
+
+describe('ehResolucaoDoPiso (aviso de nova resolução)', async () => {
+  const fs = await import('node:fs');
+  const real6085 = fs.readFileSync(new URL('./__fixtures__/res6085-trecho.html', import.meta.url), 'utf-8');
+
+  it('Res. 6.085/2026 (estrutura da ANTT) NÃO é do piso, mesmo citando "coeficientes dos pisos mínimos" no corpo', () => {
+    expect(real6085).toMatch(/coeficientes dos pisos m/);
+    expect(ementaDoHtml(real6085)).toMatch(/^Disp.e sobre a estrutura organizacional/);
+    expect(ehResolucaoDoPiso(real6085)).toBe(false);
+  });
+
+  it('resolução cuja ementa trata do piso É detectada', () => {
+    const html = '<p>RESOLUÇÃO ANTT Nº 6.090, DE 1º DE OUTUBRO DE 2026</p><p>Atualiza os coeficientes dos pisos mínimos de frete de que trata a Resolução nº 5.867, de 2020.</p><p>A Diretoria Colegiada da ANTT resolve:</p>';
+    expect(ehResolucaoDoPiso(html)).toBe(true);
+  });
+
+  it('sem ementa legível: cai na busca no texto (prefere avisar a perder uma resolução)', () => {
+    expect(ementaDoHtml(htmlResolucao(NOVAS))).toBeNull();
+    expect(ehResolucaoDoPiso(htmlResolucao(NOVAS))).toBe(true);  // tem "Coeficiente de custo"
+    expect(ehResolucaoDoPiso('<p>Página qualquer sem relação</p>')).toBe(false);
   });
 });

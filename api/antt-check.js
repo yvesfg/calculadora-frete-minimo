@@ -13,6 +13,8 @@
 //  Resp: { current, ano, newer: bool, latest: number|null, checked }
 // ─────────────────────────────────────────────────────────
 
+import { ehResolucaoDoPiso } from "../src/utils/anttUpdate.js";
+
 const PORTAL = "https://anttlegis.antt.gov.br/action/ActionDatalegis.php";
 const EMPTY_MAX = 40000; // bytes: acima disso a página tem conteúdo real
 const SCAN_AHEAD = 40;   // teto de números a varrer acima da base
@@ -39,7 +41,9 @@ async function fetchRes(numero, ano) {
   }
 }
 
-const isPiso = (html) => /5\.?867|Coeficiente|piso\s*m[íi]nimo/i.test(html);
+// Decide pela ementa (ver anttUpdate.js): o corpo de outras resoluções
+// pode citar o piso de passagem — ex.: Res. 6.085/2026 (estrutura da ANTT).
+const isPiso = ehResolucaoDoPiso;
 
 export default async function handler(req, res) {
   const base = parseInt(String(req.query.base || "6084").replace(/\D/g, ""), 10) || 6084;

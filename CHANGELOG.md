@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-28 — Aviso de nova resolução: fim do falso positivo
+
+**Solicitado:** "Atualizar base" falhou com "nenhum coeficiente encontrado" para a Res. 6.085/2026; entender se os coeficientes mudaram.
+
+**Implementado:**
+- Diagnóstico: a Res. 6.085/2026 trata da **estrutura organizacional da ANTT**, não do piso — coeficientes da 6.084 seguem valendo. O aviso disparou porque o corpo cita "coeficientes dos pisos mínimos" ao listar atribuições de uma gerência.
+- `ementaDoHtml` / `ehResolucaoDoPiso` (anttUpdate.js): decide pela ementa; sem ementa legível, mantém a busca no texto (prefere avisar a perder resolução). Tolera acento corrompido.
+- `api/antt-check.js` usa `ehResolucaoDoPiso`; resoluções de outro assunto são puladas e a varredura continua.
+- Testes: 20 (fixture com trecho real da 6.085).
+
 ## 2026-09-28 — Base ANTT: só admin altera + segurança
 
 **Solicitado:** somente admin pode atualizar/voltar a base; reforçar a segurança.
