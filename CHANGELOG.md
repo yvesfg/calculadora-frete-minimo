@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-09-28 — Permissões liberadas + auditoria (Supabase)
+
+**Solicitado:** liberar importar/editar para todos os operadores; auditoria de quem alterou o quê e quando, visível só para o admin.
+
+**Implementado (só banco):**
+- Tabela `auditoria` (em, tabela, operação, registro, usuário, papel, antes/depois — no UPDATE só os campos alterados). RLS sem políticas e sem grants: nada pela API; leitura só pelo painel do Supabase.
+- Trigger `_auditar` em `frete_conferencia` e `co_usuarios` (ignora senha, token/sessão e `atualizado_em`; troca só de sessão não gera registro). Pega toda alteração, venha de qualquer função ou do painel.
+- `_validar_token_e_base` marca o usuário da sessão na transação (`app.co_usuario_id/nome`) → todas as RPCs com token identificam o autor. Backup da versão anterior em `_backup_funcoes_20260928`.
+- `perms.importar/editar = true` para os 5 operadores que não tinham (auditado).
+- Testado: alteração via RPC gravou usuário, papel `anon` e só o campo alterado; anon não lê a auditoria.
+
 ## 2026-09-28 — Funções `*_frete_*` (Controle Operacional): filtro por base e permissão
 
 **Solicitado:** aplicar filtro por base e exigir permissão para escrever (opção a: admin ou `perms.importar`/`perms.editar`).
