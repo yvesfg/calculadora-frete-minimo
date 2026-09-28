@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-09-28 — Lockdown de `frete_usuarios` (Supabase)
+
+**Solicitado:** fechar `frete_usuarios`, que deixava qualquer um com a chave anon ler e-mails, incluir e apagar usuários.
+
+**Implementado (só banco; app sem mudança):**
+- Backup: `frete_usuarios_backup_20260928` (2 linhas), sem acesso pela API.
+- Removidas as políticas abertas (select/insert/delete para todos); anon sem nenhum acesso. Leitura/escrita só para admin da calculadora (`is_calc_admin()`).
+- Verificado antes: nenhum acesso a `frete_usuarios` pela API nas últimas 24 h; no código só a `AdminPage` (não usada pelo app — legado do login Google, junto com `TopBar`/`LoginOverlay`).
+- `is_calc_admin()` deixou de ser executável por anon.
+- Testado no banco: anon negado (ler/incluir), viewer vê 0 e não inclui, admin vê 2.
+
 ## 2026-09-28 — Aviso de nova resolução: fim do falso positivo
 
 **Solicitado:** "Atualizar base" falhou com "nenhum coeficiente encontrado" para a Res. 6.085/2026; entender se os coeficientes mudaram.
