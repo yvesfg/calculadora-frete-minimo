@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-09-28 — Funções `*_frete_*` (Controle Operacional): filtro por base e permissão
+
+**Solicitado:** aplicar filtro por base e exigir permissão para escrever (opção a: admin ou `perms.importar`/`perms.editar`).
+
+**Implementado (só banco):**
+- Backup das definições anteriores em `_backup_funcoes_20260928` (fechada para a API; para restaurar, executar a coluna `def`).
+- Helper `_frete_sessao(token)`: reaproveita `_validar_token_e_base` (sessão/expiração) e devolve admin, bases, pode_importar, pode_editar.
+- `listar_frete_periodos/pendentes/sinalizados`: só registros das bases do usuário (admin vê tudo).
+- `inserir_frete_lote`: exige admin ou `perms.importar`; recusa o lote se alguma linha for de base não permitida.
+- `atualizar_frete_lote`: exige admin ou `perms.editar`; recusa o lote se algum registro for de base não permitida.
+- Testado em transação desfeita: operador de 1 base vê 3.361/0 (outra base), admin 4.506/4.506; sem perms → insert/update negados; com perms → própria base ok, outra base negada; token falso negado.
+- Impacto: 5 operadores sem `perms.importar/editar` perderam a escrita até terem as permissões marcadas.
+
 ## 2026-09-28 — Lockdown de `frete_usuarios` (Supabase)
 
 **Solicitado:** fechar `frete_usuarios`, que deixava qualquer um com a chave anon ler e-mails, incluir e apagar usuários.
