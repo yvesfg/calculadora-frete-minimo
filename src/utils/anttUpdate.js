@@ -133,6 +133,38 @@ export function dataDaResolucao(html) {
   return m ? `${m[1].slice(0, 3)}/${m[2]}` : null; // slice(0,3) já dá jan, fev, mar…
 }
 
+/**
+ * Ementa da resolução ("Dispõe sobre…"/"Atualiza…"): texto entre o último título
+ * "RESOLUÇÃO … Nº x, DE …" e "A Diretoria Colegiada…/resolve". null se não achar.
+ */
+export function ementaDoHtml(html) {
+  const t = String(html)
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, '')
+    .replace(/<[^>]+>/g, ' ');
+  const txt = decodeEnt(t).replace(/\s+/g, ' ');
+  const fim = txt.search(/a diretoria colegiada|,?\s*resolve\s*:/i);
+  if (fim < 0) return null;
+  const antes = txt.slice(0, fim);
+  // \S tolera acento corrompido (página ISO-8859-1 lida como UTF-8 no antt-check).
+  const titulos = [...antes.matchAll(/resolu\S{1,4}o\s+(?:antt\s+)?n\S{0,2}\s*[\d.]+\s*,\s*de\s+\d{1,2}\S?\s+de\s+\S+\s+de\s+\d{4}/gi)];
+  if (!titulos.length) return null;
+  const ult = titulos[titulos.length - 1];
+  const ementa = antes.slice(ult.index + ult[0].length).trim();
+  return ementa && ementa.length < 1000 ? ementa : null;
+}
+
+/**
+ * A resolução trata do piso mínimo de frete? Decide pela EMENTA — o corpo de
+ * outras resoluções pode citar "coeficientes dos pisos mínimos" de passagem
+ * (ex.: Res. 6.085/2026, estrutura organizacional). Sem ementa legível,
+ * cai na busca no texto todo (prefere falso aviso a perder uma resolução).
+ */
+export function ehResolucaoDoPiso(html) {
+  const ementa = ementaDoHtml(html);
+  if (ementa) return /piso|frete|5\.?867|coeficiente/i.test(ementa);
+  return /5\.?867|Coeficiente|piso\s*m[íi]nimo/i.test(String(html));
+}
+
 /* ── Validação ───────────────────────────────────────────── */
 
 const FAIXA = [0.5, 2]; // novo/anterior aceitável — pega coluna trocada ou CCD↔CC
@@ -173,18 +205,32 @@ export function validarCoeficientes(novas, ref = RAW_EMBUTIDA) {
 /* ── Aplicar / voltar ────────────────────────────────────
    A base é GERAL: fica num "store" compartilhado (Supabase no app,
    ver anttStore.js). O localStorage é só cache para o 1º render.
-   Store: { ler(id) → {rows, source}|null, gravar(id, {rows, source}) },
-   ids 'ativa' e 'backup'; backup com rows null = sem backup. */
+   Store: { ler(id) → {rows, source}|null, aplicar(ativa, backupInicial),
+   voltar() → {rows, source} }; ids 'ativa' e 'backup' (rows null = sem
+   backup). No Supabase, aplicar/voltar são RPCs que só admin executa. */
 
 const LS_CACHE = 'antt_base_ativa';
 const ls = () => { try { return globalThis.localStorage || null; } catch { return null; } };
 const cacheLer = () => { try { const v = ls()?.getItem(LS_CACHE); return v ? JSON.parse(v) : null; } catch { return null; } };
 const cacheGravar = v => { try { v ? ls()?.setItem(LS_CACHE, JSON.stringify(v)) : ls()?.removeItem(LS_CACHE); } catch { /* cache é opcional */ } };
 
-/** Store local (testes / fallback): mesmo contrato do Supabase. */
+/** Store local (testes / fallback): mesma semântica das RPCs do Supabase. */
+const lsGet = id => { try { const v = ls()?.getItem(`antt_store_${id}`); return v ? JSON.parse(v) : null; } catch { return null; } };
+const lsSet = (id, v) => ls()?.setItem(`antt_store_${id}`, JSON.stringify(v));
 export const storeLocal = {
-  async ler(id) { try { const v = ls()?.getItem(`antt_store_${id}`); return v ? JSON.parse(v) : null; } catch { return null; } },
-  async gravar(id, v) { ls()?.setItem(`antt_store_${id}`, JSON.stringify(v)); },
+  async ler(id) { return lsGet(id); },
+  async aplicar(ativa, backupInicial) {
+    const atual = lsGet('ativa');
+    lsSet('backup', atual?.rows ? atual : backupInicial);
+    lsSet('ativa', ativa);
+  },
+  async voltar() {
+    const b = lsGet('backup');
+    if (!b?.rows) throw new Error('sem backup');
+    lsSet('ativa', b);
+    lsSet('backup', { rows: null, source: null });
+    return b;
+  },
 };
 
 function aplicarNaMemoria(rows, source) {
@@ -214,8 +260,7 @@ export async function aplicarResolucao(novas, { numero, ano, vigor }, store = st
     url: resUrl(numero, ano),
   };
   const ativa = { rows: v.rows, source };
-  await store.gravar('backup', fotoAtual());
-  await store.gravar('ativa', ativa);
+  await store.aplicar(ativa, fotoAtual()); // backup = ativa geral atual (ou a base em uso, se ainda não houver)
   aplicarNaMemoria(v.rows, source);
   cacheGravar(ativa);
   return source;
@@ -229,10 +274,10 @@ export async function backupInfo(store = storeLocal) {
 
 /** Volta (para todos) para a base guardada no backup. */
 export async function voltarResolucaoAnterior(store = storeLocal) {
-  const b = await store.ler('backup');
-  if (!valida(b)) throw new Error('backup ausente ou corrompido');
-  await store.gravar('ativa', { rows: b.rows, source: b.source });
-  await store.gravar('backup', { rows: null, source: null });
+  const bk = await store.ler('backup');
+  if (!valida(bk)) throw new Error('backup ausente ou corrompido');
+  const b = await store.voltar();
+  if (!valida(b)) throw new Error('backup restaurado inválido');
   aplicarNaMemoria(b.rows, b.source);
   cacheGravar(b);
   return b.source;
