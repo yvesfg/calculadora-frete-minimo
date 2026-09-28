@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-09-28 — Base ANTT: só admin altera + segurança
+
+**Solicitado:** somente admin pode atualizar/voltar a base; reforçar a segurança.
+
+**Implementado:**
+- Supabase: escrita direta em `frete_antt_base` revogada (anon/authenticated só leem). Alterações só pelas RPCs `antt_base_aplicar` / `antt_base_voltar` (SECURITY DEFINER), que exigem `is_calc_admin()` = admin ativo do módulo `calculadora` em `hub_user_modulos` (usuário do token do Hub).
+- Backup + base ativa gravados numa única transação; backup = base geral anterior.
+- Auditoria append-only `frete_antt_base_log` (ação, resolução, anterior, usuário, data); só admin lê.
+- App: botões "Atualizar base"/"Voltar" só para admin; não-admin vê "Peça a um admin…". Leitura da base continua pública (chave anon).
+- Testes: 17 (inclui não-admin recusado sem alterar a base e 2ª atualização com backup correto). SQL validado simulando admin, viewer e escrita direta.
+
 ## 2026-09-28 — Base ANTT geral (Supabase)
 
 **Solicitado:** a atualização da base valer para todos, não só para o navegador de quem clicou.

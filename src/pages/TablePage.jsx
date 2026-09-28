@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Dropdown from '../components/Dropdown.jsx';
 import { RAW, IDX, CARGO_LBL, CARGO_SECS, TBL_AXLES, TBL_DESCS, ANTT_SOURCE, fmtNum } from '../utils/anttData.js';
 import { atualizarBase, voltarResolucaoAnterior, backupInfo } from '../utils/anttUpdate.js';
-import { storeSupabase } from '../utils/anttStore.js';
+import { storeSupabase, souAdminCalc } from '../utils/anttStore.js';
 
 const TABLES = ['A','B','C','D'];
 
@@ -15,8 +15,13 @@ export default function TablePage() {
   const [upd, setUpd]     = useState({ status: 'idle' }); // idle|loading|done|error (atualizar/voltar base)
   const [backup, setBackup] = useState(null); // resolução guardada no backup geral
 
-  // A base geral já foi sincronizada no main.jsx; aqui só o backup (p/ "Voltar").
-  useEffect(() => { backupInfo(storeSupabase).then(setBackup).catch(() => {}); }, []);
+  const [admin, setAdmin]   = useState(false); // só admin da calculadora altera a base (o banco garante)
+
+  // A base geral já foi sincronizada no main.jsx; aqui o backup (p/ "Voltar") e o papel.
+  useEffect(() => {
+    backupInfo(storeSupabase).then(setBackup).catch(() => {});
+    souAdminCalc().then(setAdmin);
+  }, []);
 
   // Nº e ano da resolução-base (ex.: 'Res. ANTT 6.084/2026' → 6084 / 2026)
   const baseNum = parseInt((ANTT_SOURCE.resolucao.match(/(\d[\d.]*)\/\d{4}/)?.[1] || '6084').replace(/\D/g, ''), 10);
@@ -94,13 +99,13 @@ export default function TablePage() {
           <span className="tbl-update-check-sub">
             {check.status==='newer'
               ? <>
-                  <button type="button" className="fuel-anp-btn" onClick={atualizar} disabled={upd.status==='loading'}>
+                  {admin ? <button type="button" className="fuel-anp-btn" onClick={atualizar} disabled={upd.status==='loading'}>
                     {upd.status==='loading' ? '⏳ Atualizando…' : 'Atualizar base'}
-                  </button>
+                  </button> : 'Peça a um admin para atualizar a base'}
                   {' · '}<a href={resLink(check.latest)} target="_blank" rel="noreferrer">ver Res. {fmtRes(check.latest)}</a>
                 </>
               : <>Base: {ANTT_SOURCE.resolucao} · vigor {ANTT_SOURCE.vigor} · <a href={ANTT_SOURCE.url} target="_blank" rel="noreferrer">portaria oficial</a></>}
-            {backup && (
+            {admin && backup && (
               <>{' · '}<button type="button" className="fuel-anp-btn" onClick={voltar}>
                 ↩ Voltar para {backup.resolucao}
               </button></>

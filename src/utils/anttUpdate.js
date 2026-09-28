@@ -173,18 +173,32 @@ export function validarCoeficientes(novas, ref = RAW_EMBUTIDA) {
 /* ── Aplicar / voltar ────────────────────────────────────
    A base é GERAL: fica num "store" compartilhado (Supabase no app,
    ver anttStore.js). O localStorage é só cache para o 1º render.
-   Store: { ler(id) → {rows, source}|null, gravar(id, {rows, source}) },
-   ids 'ativa' e 'backup'; backup com rows null = sem backup. */
+   Store: { ler(id) → {rows, source}|null, aplicar(ativa, backupInicial),
+   voltar() → {rows, source} }; ids 'ativa' e 'backup' (rows null = sem
+   backup). No Supabase, aplicar/voltar são RPCs que só admin executa. */
 
 const LS_CACHE = 'antt_base_ativa';
 const ls = () => { try { return globalThis.localStorage || null; } catch { return null; } };
 const cacheLer = () => { try { const v = ls()?.getItem(LS_CACHE); return v ? JSON.parse(v) : null; } catch { return null; } };
 const cacheGravar = v => { try { v ? ls()?.setItem(LS_CACHE, JSON.stringify(v)) : ls()?.removeItem(LS_CACHE); } catch { /* cache é opcional */ } };
 
-/** Store local (testes / fallback): mesmo contrato do Supabase. */
+/** Store local (testes / fallback): mesma semântica das RPCs do Supabase. */
+const lsGet = id => { try { const v = ls()?.getItem(`antt_store_${id}`); return v ? JSON.parse(v) : null; } catch { return null; } };
+const lsSet = (id, v) => ls()?.setItem(`antt_store_${id}`, JSON.stringify(v));
 export const storeLocal = {
-  async ler(id) { try { const v = ls()?.getItem(`antt_store_${id}`); return v ? JSON.parse(v) : null; } catch { return null; } },
-  async gravar(id, v) { ls()?.setItem(`antt_store_${id}`, JSON.stringify(v)); },
+  async ler(id) { return lsGet(id); },
+  async aplicar(ativa, backupInicial) {
+    const atual = lsGet('ativa');
+    lsSet('backup', atual?.rows ? atual : backupInicial);
+    lsSet('ativa', ativa);
+  },
+  async voltar() {
+    const b = lsGet('backup');
+    if (!b?.rows) throw new Error('sem backup');
+    lsSet('ativa', b);
+    lsSet('backup', { rows: null, source: null });
+    return b;
+  },
 };
 
 function aplicarNaMemoria(rows, source) {
@@ -214,8 +228,7 @@ export async function aplicarResolucao(novas, { numero, ano, vigor }, store = st
     url: resUrl(numero, ano),
   };
   const ativa = { rows: v.rows, source };
-  await store.gravar('backup', fotoAtual());
-  await store.gravar('ativa', ativa);
+  await store.aplicar(ativa, fotoAtual()); // backup = ativa geral atual (ou a base em uso, se ainda não houver)
   aplicarNaMemoria(v.rows, source);
   cacheGravar(ativa);
   return source;
@@ -229,10 +242,10 @@ export async function backupInfo(store = storeLocal) {
 
 /** Volta (para todos) para a base guardada no backup. */
 export async function voltarResolucaoAnterior(store = storeLocal) {
-  const b = await store.ler('backup');
-  if (!valida(b)) throw new Error('backup ausente ou corrompido');
-  await store.gravar('ativa', { rows: b.rows, source: b.source });
-  await store.gravar('backup', { rows: null, source: null });
+  const bk = await store.ler('backup');
+  if (!valida(bk)) throw new Error('backup ausente ou corrompido');
+  const b = await store.voltar();
+  if (!valida(b)) throw new Error('backup restaurado inválido');
   aplicarNaMemoria(b.rows, b.source);
   cacheGravar(b);
   return b.source;

@@ -114,7 +114,14 @@ describe('parseResolucaoHtml + validarCoeficientes', () => {
 // Store em memória = tabela frete_antt_base (compartilhada entre usuários).
 const novoStore = () => {
   const db = new Map();
-  return { db, async ler(id) { return db.get(id) ?? null; }, async gravar(id, v) { db.set(id, JSON.parse(JSON.stringify(v))); } };
+  const put = (id, v) => db.set(id, JSON.parse(JSON.stringify(v)));
+  return {
+    db,
+    async ler(id) { return db.get(id) ?? null; },
+    // mesma semântica da RPC antt_base_aplicar: backup = ativa atual, senão a enviada
+    async aplicar(ativa, backupInicial) { put('backup', db.get('ativa')?.rows ? db.get('ativa') : backupInicial); put('ativa', ativa); },
+    async voltar() { const b = db.get('backup'); if (!b?.rows) throw new Error('sem backup'); put('ativa', b); put('backup', { rows: null, source: null }); return b; },
+  };
 };
 const simulaOutroUsuario = () => { // outro navegador: memória e cache zerados
   mem.clear();
@@ -147,9 +154,30 @@ describe('aplicarResolucao / voltarResolucaoAnterior', () => {
   });
 
   it('falha ao gravar no store: base em uso não muda', async () => {
-    const st = { async ler() { return null; }, async gravar() { throw new Error('offline'); } };
+    const st = { async ler() { return null; }, async aplicar() { throw new Error('offline'); } };
     await expect(aplicarResolucao(NOVAS, META, st)).rejects.toThrow(/offline/);
     expect(RAW).toEqual(RAW_EMBUTIDA);
+  });
+
+  it('não admin: banco recusa aplicar e voltar, base em uso não muda', async () => {
+    const st = novoStore();
+    await aplicarResolucao(NOVAS, META, st); // admin aplicou antes
+    const negado = { ...st, async aplicar() { throw new Error('apenas admin da calculadora pode alterar a base'); },
+      async voltar() { throw new Error('apenas admin da calculadora pode alterar a base'); } };
+    const outra = NOVAS.map(r => { const n = [...r]; n[IDX.CCD] = r[IDX.CCD] * 1.01; return n; });
+    await expect(aplicarResolucao(outra, { ...META, numero: 6086 }, negado)).rejects.toThrow(/apenas admin/);
+    await expect(voltarResolucaoAnterior(negado)).rejects.toThrow(/apenas admin/);
+    expect(RAW).toEqual(NOVAS);
+    expect(ANTT_SOURCE.resolucao).toBe('Res. ANTT 6.085/2026');
+  });
+
+  it('segunda atualização: backup vira a base geral anterior (não a embutida)', async () => {
+    const st = novoStore();
+    await aplicarResolucao(NOVAS, META, st);
+    const nova2 = NOVAS.map(r => { const n = [...r]; n[IDX.CC] = Math.round(r[IDX.CC] * 1.02 * 100) / 100; return n; });
+    await aplicarResolucao(nova2, { ...META, numero: 6086 }, st);
+    expect(st.db.get('backup').rows).toEqual(NOVAS);
+    expect(await backupInfo(st)).toMatchObject({ resolucao: 'Res. ANTT 6.085/2026' });
   });
 
   it('é geral: outro usuário sincroniza e recebe a nova base', async () => {
