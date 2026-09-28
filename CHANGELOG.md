@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-28 — Lockdown de `co_logs_alteracoes` (Supabase)
+
+**Solicitado:** fechar o log legado `co_logs_alteracoes` (qualquer um lia e inseria).
+
+**Implementado (só banco):**
+- Backup `co_logs_alteracoes_backup_20260928` (43 linhas), sem acesso pela API.
+- Políticas abertas removidas e grants revogados de anon/authenticated. Leitura só pelo painel.
+- Sem impacto: as gravações do app nessa tabela já falhavam (HTTP 401) antes da mudança. A auditoria confiável é `auditoria` (trigger).
+
 ## 2026-09-28 — Filtro por base/permissão nas demais funções de frete (Supabase)
 
 **Solicitado:** aplicar o mesmo filtro nas outras funções que alteram fretes.
