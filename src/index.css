@@ -735,3 +735,9 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 }
 @keyframes piso-bar-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .piso-bar { animation: none; } }
+
+/* iPhone: campo com fonte abaixo de 16px faz o Safari dar zoom sozinho ao
+   tocar, e a página fica deslocada depois. !important para vencer o inline. */
+@media (max-width: 767px) {
+  input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea { font-size: 16px !important; }
+}
