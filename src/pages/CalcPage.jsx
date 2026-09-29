@@ -96,6 +96,19 @@ export default function CalcPage() {
   const row  = findRow(tbl, cargo, axles);
   const piso = calcPiso(row, km);
 
+  // No celular o resultado fica no FIM da página, depois do formulário inteiro.
+  // Enquanto o card do resultado não está na tela, uma barra fixa embaixo mostra
+  // o piso e leva até ele com um toque.
+  const resultadoRef = useRef(null);
+  const [resultadoNaTela, setResultadoNaTela] = useState(true);
+  useEffect(() => {
+    const el = resultadoRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([e]) => setResultadoNaTela(e.isIntersecting), { threshold: 0.15 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   const peso = parseFloat(String(pesoTon).replace(',', '.')) || 0;
   const pisoPorTon = piso && peso > 0 ? piso / peso : null;
 
@@ -268,7 +281,7 @@ export default function CalcPage() {
                 </div>
               </div>
 
-              {geoErr && <div className="err-banner">⚠ {geoErr}</div>}
+              {geoErr && <div className="err-banner"><Icon name="alerta" size={13} style={{ flexShrink:0, verticalAlign:'-2px' }} /> {geoErr}</div>}
 
               {geoLoading && (
                 <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:11, color:'var(--text3)', marginTop:8 }}>
@@ -279,7 +292,7 @@ export default function CalcPage() {
 
               {routes.length > 1 && (
                 <div className="route-alts">
-                  <div className="route-alts-title">🔀 Rotas alternativas</div>
+                  <div className="route-alts-title"><Icon name="rotas" size={13} style={{ flexShrink:0, verticalAlign:'-2px' }} /> Rotas alternativas</div>
                   {routes.map((rt, i) => (
                     <button
                       key={i}
@@ -296,7 +309,7 @@ export default function CalcPage() {
               </>)}
 
               <div className="dist-badge">
-                <span style={{ fontSize:12 }}>📏</span>
+                <span style={{ color:'var(--text3)', display:'flex' }}><Icon name="regua" size={14} style={{ flexShrink:0, verticalAlign:'-2px' }} /></span>
                 <span>Distância:</span>
                 <input
                   value={distKm}
@@ -361,7 +374,7 @@ export default function CalcPage() {
               <div style={{ marginTop:10 }}>
                 <label className="field-label">Peso da carga (opcional)</label>
                 <div className="dist-badge" style={{ marginTop:0 }}>
-                  <span style={{ fontSize:12 }}>⚖️</span>
+                  <span style={{ color:'var(--text3)', display:'flex' }}><Icon name="peso" size={14} style={{ flexShrink:0, verticalAlign:'-2px' }} /></span>
                   <input
                     value={pesoTon}
                     onChange={e => setPesoTon(e.target.value)}
@@ -414,7 +427,7 @@ export default function CalcPage() {
             <div className="card-body card-body--compact">
               <label className="field-label">Consumo médio</label>
               <div className="dist-badge" style={{ marginTop:0 }}>
-                <span style={{ fontSize:12 }}>⛽</span>
+                <span style={{ color:'var(--text3)', display:'flex' }}><Icon name="combustivel" size={14} style={{ flexShrink:0, verticalAlign:'-2px' }} /></span>
                 <input
                   value={kmL}
                   onChange={e => { setKmL(e.target.value); setKmLAuto(false); }}
@@ -487,7 +500,7 @@ export default function CalcPage() {
               )}
               {precoModo === 'regiao' && dieselInfo.idadeDias > 21 && (
                 <div className="fuel-hint warn">
-                  ⚠ Levantamento de {diaMes(dieselInfo.semanaFim)} ({dieselInfo.idadeDias} dias) — vale atualizar.
+                  <Icon name="alerta" size={12} style={{ flexShrink:0, verticalAlign:'-2px' }} /> Levantamento de {diaMes(dieselInfo.semanaFim)} ({dieselInfo.idadeDias} dias) — vale atualizar.
                 </div>
               )}
 
@@ -495,7 +508,7 @@ export default function CalcPage() {
                 <div style={{ marginTop:10 }}>
                   <label className="field-label">Consumo no retorno vazio (opcional)</label>
                   <div className="dist-badge" style={{ marginTop:0 }}>
-                    <span style={{ fontSize:12 }}>🍃</span>
+                    <span style={{ color:'var(--text3)', display:'flex' }}><Icon name="folha" size={14} style={{ flexShrink:0, verticalAlign:'-2px' }} /></span>
                     <input
                       value={kmLVazio}
                       onChange={e => setKmLVazio(e.target.value)}
@@ -514,10 +527,17 @@ export default function CalcPage() {
         {/* RIGHT COLUMN — results */}
         <div>
           {/* Main result */}
-          <div className="result-card" style={{ marginBottom:12 }}>
+          {piso && !resultadoNaTela && (
+            <button type="button" className="piso-bar" onClick={() => resultadoRef.current?.scrollIntoView({ behavior:'smooth', block:'start' })}>
+              <span className="piso-bar__lbl">Piso ANTT · TAB {tbl}</span>
+              <span className="piso-bar__val">{fmtBRL(piso)}</span>
+              <span className="piso-bar__go">Ver detalhes</span>
+            </button>
+          )}
+          <div className="result-card" style={{ marginBottom:12 }} ref={resultadoRef}>
             {!piso ? (
               <div className="result-empty">
-                <span style={{ fontSize:32 }}>⚡</span>
+                <span style={{ color:'var(--accent)', display:'flex' }}><Icon name="raio" size={30} /></span>
                 <div>
                   <strong style={{ color:'var(--text2)', display:'block' }}>Configure a rota e veículo</strong>
                   O piso ANTT aparecerá aqui
@@ -538,20 +558,20 @@ export default function CalcPage() {
 
                 <div className="result-rows">
                   <div className="result-row">
-                    <span className="result-row-label">📊 CCD</span>
+                    <span className="result-row-label"><Icon name="resultado" size={13} style={{ flexShrink:0, verticalAlign:'-2px' }} /> CCD</span>
                     <span className="result-row-val">R$ {fmtNum(row?.[IDX.CCD], 4)}/km</span>
                   </div>
                   <div className="result-row">
-                    <span className="result-row-label">🔒 CC (custo fixo)</span>
+                    <span className="result-row-label"><Icon name="cadeado" size={13} style={{ flexShrink:0, verticalAlign:'-2px' }} /> CC (custo fixo)</span>
                     <span className="result-row-val">{fmtBRL(row?.[IDX.CC])}</span>
                   </div>
                   <div className="result-row">
-                    <span className="result-row-label">📦 {CARGO_LBL[cargo]}</span>
+                    <span className="result-row-label"><Icon name="carga" size={13} style={{ flexShrink:0, verticalAlign:'-2px' }} /> {CARGO_LBL[cargo]}</span>
                     <span className="result-row-val">{axles} eixos</span>
                   </div>
                   {pisoPorTon != null && (
                     <div className="result-row">
-                      <span className="result-row-label">⚖️ Peso informado</span>
+                      <span className="result-row-label"><Icon name="peso" size={13} style={{ flexShrink:0, verticalAlign:'-2px' }} /> Peso informado</span>
                       <span className="result-row-val">{fmtNum(peso, 1)} ton · R$ {fmtNum(pisoPorTon, 2)}/ton</span>
                     </div>
                   )}
@@ -645,13 +665,13 @@ export default function CalcPage() {
                   Piso = CCD × distância + CC &nbsp;·&nbsp; {ANTT_SOURCE.resolucao}
                 </div>
                 <div className="result-note" style={{ paddingTop:0 }}>
-                  🛣️ Pedágio não incluso no piso — deve ser pago à parte, conforme legislação.
+                  <Icon name="estrada" size={13} style={{ flexShrink:0, verticalAlign:'-2px' }} /> Pedágio não incluso no piso — deve ser pago à parte, conforme legislação.
                 </div>
 
                 {/* Margin calc */}
                 <div className="margin-calc">
                   <div className="margin-calc-head">
-                    <div className="margin-calc-icon">💰</div>
+                    <div className="margin-calc-icon"><Icon name="dinheiro" size={18} /></div>
                     <span className="margin-calc-title">Simulação de Margem</span>
                     <div className="margin-inp-group">
                       <span className="margin-inp-label">Margem</span>
@@ -691,7 +711,7 @@ export default function CalcPage() {
                     )}
                   </div>
 
-                  <div style={{ padding:'10px 14px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                  <div className="scenario-grid">
                     <ScenarioCard
                       variant="markup"
                       title="Markup s/ Piso"
@@ -727,7 +747,7 @@ export default function CalcPage() {
                 <div style={{ padding:'0 14px 14px' }}>
                   <div className="embarcadora-panel">
                     <div className="embarcadora-toggle" onClick={() => setShowEmb(v => !v)}>
-                      <div className="embarcadora-toggle-icon">💼</div>
+                      <div className="embarcadora-toggle-icon"><Icon name="maleta" size={18} /></div>
                       <div style={{ flex:1 }}>
                         <div className="embarcadora-toggle-label">Preço da Embarcadora</div>
                         <div className="embarcadora-toggle-hint">Compare o preço cotado com os pisos</div>
@@ -766,7 +786,7 @@ export default function CalcPage() {
 
                         {embModo === 'ton' && peso <= 0 && (
                           <div className="fuel-hint warn" style={{ marginBottom:8 }}>
-                            ⚠ Informe o peso da carga no cartão "Tipo de Carga" para converter R$/ton em valor do trecho.
+                            <Icon name="alerta" size={12} style={{ flexShrink:0, verticalAlign:'-2px' }} /> Informe o peso da carga no cartão "Tipo de Carga" para converter R$/ton em valor do trecho.
                           </div>
                         )}
 
@@ -810,12 +830,12 @@ export default function CalcPage() {
                         </div>
                         {embBruto > 0 && embBruto < piso && (
                           <div className="emb-warn-bar">
-                            ⚠ Valor pago ({fmtBRL(embBruto)}) abaixo do piso ANTT ({fmtBRL(piso)}) — vedado por lei
+                            <Icon name="alerta" size={12} style={{ flexShrink:0, verticalAlign:'-2px' }} /> Valor pago ({fmtBRL(embBruto)}) abaixo do piso ANTT ({fmtBRL(piso)}) — vedado por lei
                           </div>
                         )}
                         {embAfogado && (
                           <div className="emb-warn-bar emb-warn-bar--fuel">
-                            🔥 Sobram {fmtBRL(embSobra)} depois do {extrasLbl} — menos que o custo fixo de
+                            <Icon name="queda" size={12} style={{ flexShrink:0, verticalAlign:'-2px' }} /> Sobram {fmtBRL(embSobra)} depois do {extrasLbl} — menos que o custo fixo de
                             carga/descarga ({fmtBRL(row[IDX.CC])}). Viagem no prejuízo.
                           </div>
                         )}

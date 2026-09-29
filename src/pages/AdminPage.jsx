@@ -55,7 +55,7 @@ export default function AdminPage({ user }) {
       <div className="admin-section">
         <div className="admin-section-head">Usuários com acesso</div>
         <div className="admin-section-body">
-          {err && <div className="err-banner" style={{ marginBottom:10 }}>⚠ {err}</div>}
+          {err && <div className="err-banner" style={{ marginBottom:10 }}>{err}</div>}
           {loading
             ? <div style={{ color:'var(--text3)', fontSize:12 }}>Carregando…</div>
             : users.map(u => (
@@ -118,7 +118,7 @@ export default function AdminPage({ user }) {
           </div>
           {status && (
             <div className={`admin-status ${ok ? 'ok' : 'err'}`}>
-              {ok ? '✓' : '✗'} {msg}
+              {ok ? 'OK' : 'Falhou'} · {msg}
             </div>
           )}
         </div>

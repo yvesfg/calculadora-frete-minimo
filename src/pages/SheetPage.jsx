@@ -181,7 +181,7 @@ export default function SheetPage() {
       const extracted = Array.isArray(data.rows) ? data.rows : [];
       if (!extracted.length) throw new Error('Nenhuma rota reconhecida no documento');
       setText(rowsToText(extracted));
-      setIntake({ type: 'ok', msg: `✨ IA extraiu ${extracted.length} rota(s) — confira e clique Calcular` });
+      setIntake({ type: 'ok', msg: `IA extraiu ${extracted.length} rota(s) — confira e clique Calcular` });
     } catch (e) {
       setIntake({ type: 'err', msg: 'IA: ' + e.message });
     }

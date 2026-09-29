@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { HubGate } from './HubGuard.jsx';
+import Icon from './components/Icon.jsx';
 import CalcPage from './pages/CalcPage.jsx';
 import TablePage from './pages/TablePage.jsx';
 import SheetPage from './pages/SheetPage.jsx';
 
 const TABS = [
-  { id:'calc',  label:'Calculadora', icon:'⚡' },
-  { id:'table', label:'Tabelas ANTT', icon:'📊' },
-  { id:'sheet', label:'Planilha',     icon:'📋' },
+  { id:'calc',  label:'Calculadora', icon:'raio' },
+  { id:'table', label:'Tabelas ANTT', icon:'tabela' },
+  { id:'sheet', label:'Planilha',     icon:'planilha' },
 ];
 
 export default function App() {
@@ -23,7 +24,7 @@ export default function App() {
             className={`tab-btn${page === t.id ? ' active' : ''}`}
             onClick={() => setPage(t.id)}
           >
-            <span>{t.icon}</span>
+            <Icon name={t.icon} size={15} />
             {t.label}
           </button>
         ))}

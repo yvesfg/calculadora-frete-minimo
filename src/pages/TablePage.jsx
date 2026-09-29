@@ -91,10 +91,10 @@ export default function TablePage() {
         >
           <button type="button" className="tbl-update-check-main" onClick={verificar} disabled={check.status==='loading'}>
             {check.status==='loading' ? '⏳ Verificando na ANTT…'
-              : check.status==='uptodate' ? '✅ Base atualizada — é a mais recente'
-              : check.status==='newer' ? `⚠️ Nova resolução: Res. ${fmtRes(check.latest)}/${baseAno}`
-              : check.status==='error' ? '❌ Não deu para verificar — abrir portaria'
-              : '🔎 Verificar atualização na ANTT'}
+              : check.status==='uptodate' ? 'Base atualizada — é a mais recente'
+              : check.status==='newer' ? `Nova resolução: Res. ${fmtRes(check.latest)}/${baseAno}`
+              : check.status==='error' ? 'Não deu para verificar — abrir portaria'
+              : 'Verificar atualização na ANTT'}
           </button>
           <span className="tbl-update-check-sub">
             {check.status==='newer'
@@ -113,10 +113,10 @@ export default function TablePage() {
           </span>
         </div>
       </div>
-      {upd.status==='done' && <p className="fuel-anp-msg" style={{ marginBottom:8 }}>✅ {upd.msg}</p>}
+      {upd.status==='done' && <p className="fuel-anp-msg" style={{ marginBottom:8 }}>{upd.msg}</p>}
       {upd.status==='error' && (
         <div className="fuel-anp-msg err" style={{ marginBottom:8 }}>
-          ❌ Base não alterada: {upd.msg}
+          Base não alterada: {upd.msg}
           {upd.erros?.length > 0 && (
             <ul style={{ marginLeft:18 }}>{upd.erros.slice(0, 8).map(e => <li key={e}>{e}</li>)}{upd.erros.length > 8 && <li>… +{upd.erros.length - 8}</li>}</ul>
           )}

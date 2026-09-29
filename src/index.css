@@ -690,3 +690,48 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
   .toggles-row { flex-wrap: wrap; }
   .select-card { min-width: 0; }
 }
+
+/* Markup × Margem real lado a lado; no celular um embaixo do outro — em
+   2 colunas de 170px o valor cortava ("R$ 9.356,8…"). */
+.scenario-grid { padding: 10px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 520px) { .scenario-grid { grid-template-columns: 1fr; } }
+
+/* ── Celular (Cabine, set/2026) ─────────────────────────────────────────── */
+.tab-btn { white-space: nowrap; }
+.piso-bar { display: none; }
+@media (max-width: 768px) {
+  /* Abas cabem numa linha: rola de lado se precisar, sem quebrar o rótulo. */
+  .tab-nav { padding: 0 6px; overflow-x: auto; scrollbar-width: none; }
+  .tab-nav::-webkit-scrollbar { display: none; }
+  .tab-btn { padding: 12px 12px; flex: 1 0 auto; justify-content: center; }
+
+  /* Composição: os dois interruptores lado a lado e o seletor de eixos embaixo,
+     largura inteira. Em 3 colunas o rótulo quebrava em "Tab.A/C: / SIM". */
+  .toggles-row--mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .toggles-row--mini .select-card { grid-column: 1 / -1; }
+  .toggles-row--mini .toggle-card,
+  .toggles-row--mini .select-card { padding: 10px 12px; }
+  .toggles-row--mini .toggle-card-label,
+  .toggles-row--mini .select-card .field-label { font-size: 10px; }
+  .toggles-row--mini .toggle-card-val { font-size: 12px; }
+  .toggles-row--mini .pill-switch { width: 30px; height: 16px; }
+  .toggles-row--mini .pill-switch::after { width: 12px; height: 12px; }
+  .toggles-row--mini .toggle-card.on .pill-switch::after { left: 16px; }
+
+  /* Barra fixa do piso enquanto o card do resultado está fora da tela. */
+  .piso-bar {
+    display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; align-items: center;
+    column-gap: 12px; position: fixed; left: 10px; right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 60;
+    padding: 10px 14px; border-radius: 14px; text-align: left;
+    background: var(--card); border: 1px solid var(--accent-ring);
+    box-shadow: 0 12px 32px rgba(0,0,0,.55); color: var(--text); font-family: var(--font); cursor: pointer;
+    animation: piso-bar-in .22s cubic-bezier(.34, 1.1, .64, 1);
+  }
+  .piso-bar__lbl { grid-column: 1; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text3); font-family: var(--font-mono); }
+  .piso-bar__val { grid-column: 1; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 600; color: var(--accent); line-height: 1.2; }
+  .piso-bar__go { grid-column: 2; grid-row: 1 / span 2; font-size: 12px; font-weight: 600; color: var(--text2); }
+  .page-content { padding-bottom: 90px; }
+}
+@keyframes piso-bar-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .piso-bar { animation: none; } }
