@@ -36,8 +36,8 @@ export function HubGate({ children }) {
 
   if (ok === null) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0b0e11' }}>
-        <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid #2b3139', borderTopColor: '#fcd535', animation: 'spin .8s linear infinite' }} />
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0c0d10' }}>
+        <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid #1b1e23', borderTopColor: '#f2c14e', animation: 'spin .8s linear infinite' }} />
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     );
@@ -45,21 +45,21 @@ export function HubGate({ children }) {
 
   if (!ok) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0b0e11', padding: 16 }}>
-        <div style={{ background: '#1e2329', border: '1px solid #2b3139', borderRadius: 16, padding: '40px 32px', maxWidth: 360, width: '100%', textAlign: 'center', boxShadow: '0 24px 64px rgba(0,0,0,.5)' }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(252,213,53,.1)', border: '1px solid rgba(252,213,53,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 22 }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0c0d10', padding: 16 }}>
+        <div style={{ background: '#14161a', border: '1px solid #1b1e23', borderRadius: 16, padding: '40px 32px', maxWidth: 360, width: '100%', textAlign: 'center', boxShadow: '0 24px 64px rgba(0,0,0,.5)' }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(242,193,78,.1)', border: '1px solid rgba(242,193,78,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 22 }}>
             🔒
           </div>
-          <h1 style={{ fontSize: 18, fontWeight: 800, color: '#eaecef', margin: '0 0 8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <h1 style={{ fontSize: 18, fontWeight: 800, color: '#eceae4', margin: '0 0 8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
             Acesso via Hub
           </h1>
-          <p style={{ fontSize: 12, color: '#929aa5', lineHeight: 1.6, margin: '0 0 24px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <p style={{ fontSize: 12, color: '#8d929c', lineHeight: 1.6, margin: '0 0 24px', fontFamily: 'Inter, system-ui, sans-serif' }}>
             Este módulo é acessado pelo Hub YFGroup.<br />
             Faça login para continuar.
           </p>
           <a
             href={HUB_URL}
-            style={{ display: 'block', background: '#fcd535', color: '#0b0e11', borderRadius: 8, padding: '10px 0', fontWeight: 700, fontSize: 13, textDecoration: 'none', fontFamily: 'Inter, system-ui, sans-serif', transition: '140ms ease' }}
+            style={{ display: 'block', background: '#f2c14e', color: '#0c0d10', borderRadius: 8, padding: '10px 0', fontWeight: 700, fontSize: 13, textDecoration: 'none', fontFamily: 'Inter, system-ui, sans-serif', transition: '140ms ease' }}
           >
             Ir para o Hub YFGroup
           </a>

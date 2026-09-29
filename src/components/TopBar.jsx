@@ -15,7 +15,7 @@ export default function TopBar({ user, onSignOut }) {
         <div style={{
           width:26, height:26, borderRadius:6,
           background:'var(--accent)', display:'flex', alignItems:'center', justifyContent:'center',
-          fontSize:12, fontWeight:900, color:'#0b0e11', letterSpacing:'-.02em',
+          fontSize:12, fontWeight:900, color:'#0c0d10', letterSpacing:'-.02em',
         }}>F</div>
         <span style={{ fontWeight:700, fontSize:13, color:'var(--text)', letterSpacing:'-.01em' }}>
           Frete Mínimo

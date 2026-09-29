@@ -36,7 +36,7 @@ export default function LoginOverlay({ googleClientId, onCredential }) {
         <div style={{
           width:52, height:52, borderRadius:14, background:'var(--accent)',
           display:'flex', alignItems:'center', justifyContent:'center',
-          margin:'0 auto 20px', fontSize:24, fontWeight:900, color:'#0b0e11',
+          margin:'0 auto 20px', fontSize:24, fontWeight:900, color:'#0c0d10',
         }}>F</div>
 
         <h1 style={{ fontSize:20, fontWeight:800, color:'var(--text)', marginBottom:6, letterSpacing:'-.03em' }}>
