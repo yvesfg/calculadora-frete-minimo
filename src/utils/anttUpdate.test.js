@@ -12,7 +12,7 @@ const { RAW, IDX, ANTT_SOURCE, TBL_AXLES, CARGO_LBL, findRow } = await import('.
 const {
   RAW_EMBUTIDA, SOURCE_EMBUTIDA, parseResolucaoHtml, validarCoeficientes, cargoDoTexto,
   aplicarResolucao, voltarResolucaoAnterior, backupInfo, carregarBaseAtiva, sincronizarBase, dataDaResolucao,
-  ementaDoHtml, ehResolucaoDoPiso,
+  ehAtoDoPiso, dataDoAto, decodificarHtml, cursorDaBase, rotuloAto,
 } = await import('./anttUpdate.js');
 
 const NOME = {
@@ -30,8 +30,10 @@ function htmlResolucao(rows, { omitir = null } = {}) {
   let h = '<html><body><p>RESOLUÇÃO Nº 6.085, DE 15 DE SETEMBRO DE 2026</p>';
   for (const t of ['A', 'B', 'C', 'D']) {
     const ax = TBL_AXLES[t];
+    // B e D: o texto oficial rotula as colunas 4, 5, 6, 7 e 9 (a base guarda 2–6).
+    const rot = a => (t === 'B' || t === 'D' ? { 2: 4, 3: 5, 4: 6, 5: 7, 6: 9 }[a] : a);
     h += `<p>Tabela ${t} - Transporte rodoviário de carga lotação</p><table>`;
-    h += `<tr><td>Tipo de carga</td><td>Coeficiente de custo</td><td>Unidade</td>${ax.map(a => `<td>${a}</td>`).join('')}</tr>`;
+    h += `<tr><td>Tipo de carga</td><td>Coeficiente de custo</td><td>Unidade</td>${ax.map(a => `<td>${rot(a)}</td>`).join('')}</tr>`;
     for (const cg of Object.keys(CARGO_LBL)) {
       const cel = i => ax.map(a => {
         const r = rows.find(x => x[IDX.TBL] === t && x[IDX.CARGO] === cg && x[IDX.AXLES] === a);
@@ -224,24 +226,51 @@ describe('aplicarResolucao / voltarResolucaoAnterior', () => {
   });
 });
 
-describe('ehResolucaoDoPiso (aviso de nova resolução)', async () => {
+describe('atos reais do anttlegis (Resolução DG e Portaria SUROC)', async () => {
   const fs = await import('node:fs');
-  const real6085 = fs.readFileSync(new URL('./__fixtures__/res6085-trecho.html', import.meta.url), 'utf-8');
+  const ler = f => decodificarHtml(fs.readFileSync(new URL(`./__fixtures__/${f}`, import.meta.url)));
+  const res6084 = ler('res6084.html');
+  const por22 = ler('por-suroc-22-2026.html');   // reajuste de set/2026 (<p> dentro das células)
+  const por21 = ler('por-suroc-21-2026.html');   // outro assunto, também com tabela
+  const real6085 = ler('res6085-trecho.html');
 
-  it('Res. 6.085/2026 (estrutura da ANTT) NÃO é do piso, mesmo citando "coeficientes dos pisos mínimos" no corpo', () => {
+  it('Res. 6.084/2026 real é lida idêntica à base embutida', () => {
+    const v = validarCoeficientes(parseResolucaoHtml(res6084));
+    expect(v.erros).toEqual([]);
+    expect(v.rows).toEqual(RAW_EMBUTIDA);
+  });
+
+  it('Portaria SUROC 22/2026 é do piso e traz os coeficientes reajustados', () => {
+    expect(ehAtoDoPiso(por22)).toBe(true);
+    expect(dataDoAto(por22)).toBe('2026-09-28');
+    const v = validarCoeficientes(parseResolucaoHtml(por22));
+    const a = v.rows.find(r => r[IDX.TBL] === 'A' && r[IDX.CARGO] === 'granel_solido' && r[IDX.AXLES] === 2);
+    expect(a[IDX.CCD]).toBe(4.1056);
+    expect(a[IDX.CC]).toBe(460.59);
+    const b = v.rows.find(r => r[IDX.TBL] === 'B' && r[IDX.CARGO] === 'granel_solido' && r[IDX.AXLES] === 2);
+    expect(b[IDX.CC]).toBe(533.4); // coluna oficial "4 eixos"
+  });
+
+  it('atos de outro assunto não disparam aviso, mesmo citando o piso', () => {
+    expect(ehAtoDoPiso(por21)).toBe(false);
     expect(real6085).toMatch(/coeficientes dos pisos m/);
-    expect(ementaDoHtml(real6085)).toMatch(/^Disp.e sobre a estrutura organizacional/);
-    expect(ehResolucaoDoPiso(real6085)).toBe(false);
+    expect(ehAtoDoPiso(real6085)).toBe(false);
+    expect(ehAtoDoPiso('<p>Página qualquer sem relação</p>')).toBe(false);
+  });
+});
+
+describe('cursor da checagem (duas séries)', () => {
+  it('base antiga sem cursor: deriva a resolução do rótulo e usa o SUROC embutido', () => {
+    expect(cursorDaBase({ resolucao: 'Res. ANTT 6.090/2027' }))
+      .toEqual({ ...SOURCE_EMBUTIDA.cursor, res: 6090, resAno: 2027 });
   });
 
-  it('resolução cuja ementa trata do piso É detectada', () => {
-    const html = '<p>RESOLUÇÃO ANTT Nº 6.090, DE 1º DE OUTUBRO DE 2026</p><p>Atualiza os coeficientes dos pisos mínimos de frete de que trata a Resolução nº 5.867, de 2020.</p><p>A Diretoria Colegiada da ANTT resolve:</p>';
-    expect(ehResolucaoDoPiso(html)).toBe(true);
-  });
-
-  it('sem ementa legível: cai na busca no texto (prefere avisar a perder uma resolução)', () => {
-    expect(ementaDoHtml(htmlResolucao(NOVAS))).toBeNull();
-    expect(ehResolucaoDoPiso(htmlResolucao(NOVAS))).toBe(true);  // tem "Coeficiente de custo"
-    expect(ehResolucaoDoPiso('<p>Página qualquer sem relação</p>')).toBe(false);
+  it('aplicar portaria avança só a série SUROC', async () => {
+    const src = await aplicarResolucao(NOVAS, { tipo: 'POR', numero: 22, ano: 2026 });
+    expect(src.resolucao).toBe(rotuloAto({ tipo: 'POR', numero: 22, ano: 2026 }));
+    expect(src.url).toContain('tipo=POR');
+    expect(src.url).toContain('SUROC/ANTT/MT');
+    expect(src.cursor).toEqual({ ...SOURCE_EMBUTIDA.cursor, por: 22, porAno: 2026 });
+    expect(ANTT_SOURCE.cursor.por).toBe(22);
   });
 });

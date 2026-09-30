@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-09-30 — Checagem ANTT enxerga Portarias SUROC (reajuste do piso)
+
+**Solicitado:** "Verificar atualização" dizia "a mais recente" com a Portaria SUROC nº 22/2026 (28/09) já publicada.
+
+**Causa:**
+- A checagem só varria **Resoluções DG** (`tipo=RES`, `DG/ANTT/MT`) acima da 6.084. O reajuste semestral pelo diesel sai como **Portaria SUROC** (`tipo=POR`, `SUROC/ANTT/MT`), outra série com numeração própria.
+- O parser nunca tinha lido um HTML real: falhava na própria Res. 6.084 (coluna de índice, célula vazia em vez de "—", B/D com colunas oficiais 4-5-6-7-9) e na portaria (`<p>` dentro de cada `<td>`).
+
+**Implementado:**
+- `anttUpdate.js`: ato = `{ tipo: 'RES'|'POR', numero, ano }` (`atoUrl`, `rotuloAto`); `cursor` na base com o último número de cada série (embutida: Res. 6.084 + SUROC 17). Aplicar avança só a série do ato.
+- Parser: `<p>`/`<br>` dentro de célula vira espaço; valores = últimas N células; B/D mapeiam 4,5,6,7,9 → 2..6. A Res. 6.084 real agora sai **idêntica** à base embutida (272/272).
+- `ehAtoDoPiso` = o parser extrai a tabela completa e válida; substitui `ementaDoHtml`/`ehResolucaoDoPiso` (portaria não tem ementa e a SUROC 21/2026 é outro assunto com tabela).
+- `api/antt-check.js`: varre as duas séries em paralelo (lotes de 6; portaria tolera buracos de até 12 números), trata virada de ano e devolve o ato mais novo pela data. `api/antt-coeficientes.js` aceita `tipo=POR`.
+- Testes com HTML real (Res. 6.084, Portarias SUROC 21 e 22/2026) em `src/utils/__fixtures__`.
+
 ## 2026-09-28 — Lockdown de `co_logs_alteracoes` (Supabase)
 
 **Solicitado:** fechar o log legado `co_logs_alteracoes` (qualquer um lia e inseria).

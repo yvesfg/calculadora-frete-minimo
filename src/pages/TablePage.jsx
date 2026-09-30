@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Dropdown from '../components/Dropdown.jsx';
 import { RAW, IDX, CARGO_LBL, CARGO_SECS, TBL_AXLES, TBL_DESCS, ANTT_SOURCE, fmtNum } from '../utils/anttData.js';
-import { atualizarBase, voltarResolucaoAnterior, backupInfo } from '../utils/anttUpdate.js';
+import { atualizarBase, voltarResolucaoAnterior, backupInfo, cursorDaBase } from '../utils/anttUpdate.js';
 import { storeSupabase, souAdminCalc } from '../utils/anttStore.js';
 
 const TABLES = ['A','B','C','D'];
@@ -23,16 +23,12 @@ export default function TablePage() {
     souAdminCalc().then(setAdmin);
   }, []);
 
-  // Nº e ano da resolução-base (ex.: 'Res. ANTT 6.084/2026' → 6084 / 2026)
-  const baseNum = parseInt((ANTT_SOURCE.resolucao.match(/(\d[\d.]*)\/\d{4}/)?.[1] || '6084').replace(/\D/g, ''), 10);
-  const baseAno = parseInt(ANTT_SOURCE.resolucao.match(/\/(\d{4})/)?.[1] || '2026', 10);
-  const fmtRes  = n => String(n).replace(/(\d)(\d{3})$/, '$1.$2');
-  const resLink = n => `https://anttlegis.antt.gov.br/action/ActionDatalegis.php?acao=abrirTextoAto&tipo=RES&numeroAto=${String(n).padStart(8,'0')}&seqAto=000&valorAno=${baseAno}&orgao=DG/ANTT/MT&cod_modulo=623&cod_menu=9230`;
-
   const verificar = async () => {
     setCheck({ status: 'loading' });
     try {
-      const r = await fetch(`/api/antt-check?base=${baseNum}&ano=${baseAno}`);
+      // Parte do último ato conhecido de cada série (Resolução DG e Portaria SUROC).
+      const c = cursorDaBase(ANTT_SOURCE);
+      const r = await fetch(`/api/antt-check?res=${c.res}&resAno=${c.resAno}&por=${c.por}&porAno=${c.porAno}`);
       const d = await r.json();
       setCheck(d.newer ? { status: 'newer', latest: d.latest } : { status: 'uptodate' });
     } catch {
@@ -44,7 +40,7 @@ export default function TablePage() {
   const atualizar = async () => {
     setUpd({ status: 'loading' });
     try {
-      const src = await atualizarBase(check.latest, baseAno, storeSupabase);
+      const src = await atualizarBase(check.latest, storeSupabase);
       setBackup(await backupInfo(storeSupabase));
       setUpd({ status: 'done', msg: `Base atualizada para ${src.resolucao}` });
       setCheck({ status: 'idle' }); // nova base = mais recente conhecida: some o aviso
@@ -92,7 +88,7 @@ export default function TablePage() {
           <button type="button" className="tbl-update-check-main" onClick={verificar} disabled={check.status==='loading'}>
             {check.status==='loading' ? '⏳ Verificando na ANTT…'
               : check.status==='uptodate' ? 'Base atualizada — é a mais recente'
-              : check.status==='newer' ? `Nova resolução: Res. ${fmtRes(check.latest)}/${baseAno}`
+              : check.status==='newer' ? `Nova tabela: ${check.latest.rotulo}`
               : check.status==='error' ? 'Não deu para verificar — abrir portaria'
               : 'Verificar atualização na ANTT'}
           </button>
@@ -102,7 +98,7 @@ export default function TablePage() {
                   {admin ? <button type="button" className="fuel-anp-btn" onClick={atualizar} disabled={upd.status==='loading'}>
                     {upd.status==='loading' ? '⏳ Atualizando…' : 'Atualizar base'}
                   </button> : 'Peça a um admin para atualizar a base'}
-                  {' · '}<a href={resLink(check.latest)} target="_blank" rel="noreferrer">ver Res. {fmtRes(check.latest)}</a>
+                  {' · '}<a href={check.latest.url} target="_blank" rel="noreferrer">ver {check.latest.rotulo}</a>
                 </>
               : <>Base: {ANTT_SOURCE.resolucao} · vigor {ANTT_SOURCE.vigor} · <a href={ANTT_SOURCE.url} target="_blank" rel="noreferrer">portaria oficial</a></>}
             {admin && backup && (

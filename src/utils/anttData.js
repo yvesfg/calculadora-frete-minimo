@@ -191,6 +191,9 @@ export const ANTT_SOURCE = {
   portaria:  'Anexo II · Res. 5.867/2020',
   vigor:     'jul/2026',
   url:       'https://anttlegis.antt.gov.br/action/ActionDatalegis.php?acao=abrirTextoAto&tipo=RES&numeroAto=00006084&seqAto=000&valorAno=2026&orgao=DG/ANTT/MT&cod_modulo=623&cod_menu=9230',
+  // Último ato conhecido de cada série quando esta base foi montada (jul/2026):
+  // Res. DG 6.084 e Portaria SUROC 17 (as SUROC 3 e 4/2026 são reajustes anteriores).
+  cursor:    { res: 6084, resAno: 2026, por: 17, porAno: 2026 },
 };
 
 export const TAX_PROFILES = {

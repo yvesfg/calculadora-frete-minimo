@@ -24,11 +24,37 @@ export const RAW_EMBUTIDA = RAW.map(r => [...r]);
 export const SOURCE_EMBUTIDA = { ...ANTT_SOURCE };
 
 export const PORTAL = 'https://anttlegis.antt.gov.br/action/ActionDatalegis.php';
-export function resUrl(numero, ano) {
-  const n = String(numero).padStart(8, '0');
-  return `${PORTAL}?acao=abrirTextoAto&tipo=RES&numeroAto=${n}&seqAto=000&valorAno=${ano}&orgao=DG/ANTT/MT&cod_modulo=623&cod_menu=9230`;
-}
 export const fmtRes = n => String(n).replace(/(\d)(\d{3})$/, '$1.$2');
+
+/* Os coeficientes mudam por dois tipos de ato, com numeração própria:
+     RES — Resolução da Diretoria (DG), revisão da tabela (ex.: 6.084/2026);
+     POR — Portaria SUROC, reajuste pelo diesel (ex.: 22/2026; zera a cada ano).
+   A checagem precisa varrer as duas séries. */
+const ORGAO = { RES: 'DG/ANTT/MT', POR: 'SUROC/ANTT/MT' };
+export function atoUrl({ tipo = 'RES', numero, ano }) {
+  const n = String(numero).padStart(8, '0');
+  return `${PORTAL}?acao=abrirTextoAto&tipo=${tipo}&numeroAto=${n}&seqAto=000&valorAno=${ano}&orgao=${ORGAO[tipo]}&cod_modulo=623&cod_menu=9230`;
+}
+export const resUrl = (numero, ano) => atoUrl({ tipo: 'RES', numero, ano });
+export const rotuloAto = ({ tipo = 'RES', numero, ano }) =>
+  tipo === 'POR' ? `Portaria SUROC ${numero}/${ano}` : `Res. ANTT ${fmtRes(numero)}/${ano}`;
+
+/** Último número conhecido de cada série (de onde a checagem parte). */
+export function cursorDaBase(source) {
+  if (source?.cursor) return source.cursor;
+  // Base gravada antes do cursor existir: só tinha o rótulo da resolução.
+  const m = String(source?.resolucao || '').match(/Res\.[^\d]*([\d.]+)\/(\d{4})/);
+  const base = { ...SOURCE_EMBUTIDA.cursor };
+  return m ? { ...base, res: +m[1].replace(/\D/g, ''), resAno: +m[2] } : base;
+}
+
+/** O anttlegis costuma servir ISO-8859-1; UTF-8 com '�' indica charset errado. */
+export function decodificarHtml(buf, contentType = '') {
+  const cs = (contentType.match(/charset=([\w-]+)/i)?.[1] || '').toLowerCase();
+  if (cs && cs !== 'utf-8' && cs !== 'utf8') return new TextDecoder('latin1').decode(buf);
+  const utf = new TextDecoder('utf-8').decode(buf);
+  return utf.includes('�') ? new TextDecoder('latin1').decode(buf) : utf;
+}
 
 const chaveLinha = (tbl, cargo, axles) => `${tbl}|${cargo}|${axles}`;
 
@@ -64,6 +90,9 @@ const decodeEnt = s => s
 function linhasDeCelulas(html) {
   const txt = String(html)
     .replace(/<(script|style)[\s\S]*?<\/\1>/gi, '')
+    // Portarias SUROC põem <p> dentro de cada <td>: ali quebra vira espaço,
+    // senão cada célula vira uma "linha" solta.
+    .replace(/<t([dh])\b[\s\S]*?<\/t\1\s*>/gi, cel => cel.replace(/<\/p\s*>|<br\s*\/?>|<\/div\s*>/gi, ' '))
     .replace(/<\/t[dh]\s*>/gi, '\u0001')
     .replace(/<\/tr\s*>|<br\s*\/?>|<\/p\s*>|<\/div\s*>/gi, '\n')
     .replace(/<[^>]+>/g, '');
@@ -76,6 +105,11 @@ function linhasDeCelulas(html) {
 const RE_NUM = /^\d{1,3}(\.\d{3})*(,\d+)?$|^\d+(,\d+)?$/;
 const RE_VAZIO = /^[-–—]$/;
 const numBR = s => parseFloat(s.replace(/\./g, '').replace(',', '.'));
+
+// Tabelas B e D (só a unidade de tração): o texto oficial usa colunas 4, 5, 6, 7 e 9
+// eixos, a base (RAW) guarda as mesmas cinco colunas como 2–6.
+const EIXOS_TRACAO = { 4: 2, 5: 3, 6: 4, 7: 5, 9: 6 };
+const eixoDaBase = (tbl, ax) => (tbl === 'B' || tbl === 'D' ? EIXOS_TRACAO[ax] ?? null : ax);
 
 /**
  * Extrai [tbl, hp, fc, cargo, axles, CCD, CC] do HTML da resolução.
@@ -106,11 +140,16 @@ export function parseResolucaoHtml(html) {
       : /descarga|\bcc\b/.test(rotulo) ? 'cc' : null;
     if (!tipo || !cargo || !eixos) continue;
 
-    const valores = cels.filter(c => RE_NUM.test(c) || RE_VAZIO.test(c));
-    if (valores.length !== eixos.length) continue; // linha desalinhada: validação acusa a falta
+    // Valores = últimas N células (N = nº de eixos): à esquerda pode vir a coluna
+    // de índice ("1", "2"…) e célula vazia ou "—" = eixo sem coeficiente.
+    const valores = cels.slice(-eixos.length);
+    if (valores.length !== eixos.length
+        || !valores.every(c => !c || RE_NUM.test(c) || RE_VAZIO.test(c))
+        || !valores.some(c => RE_NUM.test(c))) continue; // desalinhada: validação acusa a falta
     valores.forEach((v, i) => {
-      if (RE_VAZIO.test(v)) return;
-      const k = chaveLinha(tbl, cargo, eixos[i]);
+      const ax = eixoDaBase(tbl, eixos[i]);
+      if (!v || RE_VAZIO.test(v) || ax == null) return;
+      const k = chaveLinha(tbl, cargo, ax);
       const cur = achados.get(k) || {};
       if (cur[tipo] == null) cur[tipo] = numBR(v); // primeira ocorrência vale
       achados.set(k, cur);
@@ -133,37 +172,22 @@ export function dataDaResolucao(html) {
   return m ? `${m[1].slice(0, 3)}/${m[2]}` : null; // slice(0,3) já dá jan, fev, mar…
 }
 
-/**
- * Ementa da resolução ("Dispõe sobre…"/"Atualiza…"): texto entre o último título
- * "RESOLUÇÃO … Nº x, DE …" e "A Diretoria Colegiada…/resolve". null se não achar.
- */
-export function ementaDoHtml(html) {
-  const t = String(html)
-    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, '')
-    .replace(/<[^>]+>/g, ' ');
-  const txt = decodeEnt(t).replace(/\s+/g, ' ');
-  const fim = txt.search(/a diretoria colegiada|,?\s*resolve\s*:/i);
-  if (fim < 0) return null;
-  const antes = txt.slice(0, fim);
-  // \S tolera acento corrompido (página ISO-8859-1 lida como UTF-8 no antt-check).
-  const titulos = [...antes.matchAll(/resolu\S{1,4}o\s+(?:antt\s+)?n\S{0,2}\s*[\d.]+\s*,\s*de\s+\d{1,2}\S?\s+de\s+\S+\s+de\s+\d{4}/gi)];
-  if (!titulos.length) return null;
-  const ult = titulos[titulos.length - 1];
-  const ementa = antes.slice(ult.index + ult[0].length).trim();
-  return ementa && ementa.length < 1000 ? ementa : null;
+const MESES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho',
+  'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+/** Data do ato ("…Nº 22, DE 28 DE SETEMBRO DE 2026") → '2026-09-28' (null se não achar). */
+export function dataDoAto(html) {
+  const t = semAcento(decodeEnt(String(html).replace(/<[^>]+>/g, ' ')));
+  const m = t.match(new RegExp(`\\bde (\\d{1,2})\\S? de (${MESES.join('|')}) de (\\d{4})`));
+  if (!m) return null;
+  return `${m[3]}-${String(MESES.indexOf(m[2]) + 1).padStart(2, '0')}-${m[1].padStart(2, '0')}`;
 }
 
 /**
- * A resolução trata do piso mínimo de frete? Decide pela EMENTA — o corpo de
- * outras resoluções pode citar "coeficientes dos pisos mínimos" de passagem
- * (ex.: Res. 6.085/2026, estrutura organizacional). Sem ementa legível,
- * cai na busca no texto todo (prefere falso aviso a perder uma resolução).
+ * O ato traz a tabela do piso? Critério: o parser extrai TODAS as combinações
+ * com valores plausíveis. Robusto para os dois tipos — portarias SUROC não têm
+ * ementa e outras citam "pisos mínimos" de passagem (ex.: Portaria 21/2026).
  */
-export function ehResolucaoDoPiso(html) {
-  const ementa = ementaDoHtml(html);
-  if (ementa) return /piso|frete|5\.?867|coeficiente/i.test(ementa);
-  return /5\.?867|Coeficiente|piso\s*m[íi]nimo/i.test(String(html));
-}
+export const ehAtoDoPiso = html => validarCoeficientes(parseResolucaoHtml(html)).ok;
 
 /* ── Validação ───────────────────────────────────────────── */
 
@@ -235,7 +259,8 @@ export const storeLocal = {
 
 function aplicarNaMemoria(rows, source) {
   RAW.splice(0, RAW.length, ...rows.map(r => [...r]));
-  Object.assign(ANTT_SOURCE, source);
+  // cursor explícito: base gravada antes dele não pode herdar o da base anterior.
+  Object.assign(ANTT_SOURCE, source, { cursor: cursorDaBase(source) });
 }
 
 const fotoAtual = () => ({ rows: RAW.map(r => [...r]), source: { ...ANTT_SOURCE } });
@@ -246,18 +271,22 @@ const valida = b => !!(b?.source && b?.rows && validarCoeficientes(b.rows).ok);
  * se falhar — validação ou gravação — lança erro e a base em uso não muda.
  * O backup da base vigente é gravado primeiro.
  */
-export async function aplicarResolucao(novas, { numero, ano, vigor }, store = storeLocal) {
+export async function aplicarResolucao(novas, { tipo = 'RES', numero, ano, vigor }, store = storeLocal) {
   const v = validarCoeficientes(novas);
   if (!v.ok) {
     const e = new Error(`dados incompletos: ${v.erros.length} problema(s) — ${v.erros.slice(0, 3).join('; ')}`);
     e.erros = v.erros;
     throw e;
   }
+  const ato = { tipo, numero, ano };
+  const cur = cursorDaBase(ANTT_SOURCE);
   const source = {
     ...SOURCE_EMBUTIDA,
-    resolucao: `Res. ANTT ${fmtRes(numero)}/${ano}`,
+    resolucao: rotuloAto(ato),
     vigor: vigor || ANTT_SOURCE.vigor,
-    url: resUrl(numero, ano),
+    url: atoUrl(ato),
+    // Avança só a série do ato aplicado; a outra continua de onde estava.
+    cursor: tipo === 'POR' ? { ...cur, por: numero, porAno: ano } : { ...cur, res: numero, resAno: ano },
   };
   const ativa = { rows: v.rows, source };
   await store.aplicar(ativa, fotoAtual()); // backup = ativa geral atual (ou a base em uso, se ainda não houver)
@@ -304,9 +333,9 @@ export async function sincronizarBase(store = storeLocal) {
   return alvo.source;
 }
 
-/** Busca e aplica a resolução via serverless (CORS impede no navegador). */
-export async function atualizarBase(numero, ano, store = storeLocal) {
-  const r = await fetch(`/api/antt-coeficientes?numero=${numero}&ano=${ano}`, { headers: { Accept: 'application/json' } });
+/** Busca e aplica o ato ({ tipo, numero, ano }) via serverless (CORS impede no navegador). */
+export async function atualizarBase({ tipo = 'RES', numero, ano }, store = storeLocal) {
+  const r = await fetch(`/api/antt-coeficientes?tipo=${tipo}&numero=${numero}&ano=${ano}`, { headers: { Accept: 'application/json' } });
   if (!(r.headers.get('content-type') || '').includes('application/json')) {
     throw new Error('endpoint indisponível (só responde no deploy)');
   }
@@ -317,5 +346,5 @@ export async function atualizarBase(numero, ano, store = storeLocal) {
     throw e;
   }
   if (!j?.rows) throw new Error('resposta ilegível');
-  return aplicarResolucao(j.rows, { numero, ano, vigor: j.vigor }, store);
+  return aplicarResolucao(j.rows, { tipo, numero, ano, vigor: j.vigor }, store);
 }
