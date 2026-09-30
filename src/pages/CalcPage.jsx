@@ -78,6 +78,8 @@ export default function CalcPage() {
   const [embPrice, setEmbPrice] = useState('');
   const [embModo, setEmbModo]   = useState('total');  // 'total' | 'ton'
   const [embIcms, setEmbIcms]   = useState('sem');    // 'sem' (líquido) | 'com' (CTe)
+  const [contratoModo, setContratoModo]     = useState('piso'); // 'piso' | 'manual'
+  const [contratoManual, setContratoManual] = useState('');
   const [icmsAliq, setIcmsAliq] = useState(
     () => localStorage.getItem(LS.icms) || String(ICMS_PADRAO)
   );
@@ -149,6 +151,14 @@ export default function CalcPage() {
   const embTonBruto = peso > 0 && embBruto ? embBruto / peso : null;
   const embVsP1 = price1 && emb ? emb - price1 : null;
   const embVsP2 = price2 && emb ? emb - price2 : null;
+
+  // Margem da transportadora: embarcadora (líquido de ICMS) − contrato do motorista.
+  // O contrato é o piso ANTT do trecho, ou o valor combinado digitado à mão.
+  const contratoManualNum = num(contratoManual);
+  const contrato = contratoModo === 'manual' ? contratoManualNum : (piso || 0);
+  const margemBruta = emb > 0 && contrato > 0 ? emb - contrato : null;
+  const margemLiq   = emb > 0 && contrato > 0 ? emb * (1 - totalTax) - contrato : null;
+  const contratoAbaixoPiso = contratoModo === 'manual' && contratoManualNum > 0 && piso && contratoManualNum < piso;
 
   // ── Combustível ────────────────────────────────────────────
   // O consumo acompanha os eixos enquanto o usuário não digitar o dele.
@@ -908,6 +918,59 @@ export default function CalcPage() {
                                 <span className="emb-row-val" style={{ color: embAfogado ? 'var(--red)' : 'var(--cyan)' }}>
                                   {fmtBRL(embSobra)}
                                 </span>
+                              </div>
+                            )}
+
+                            {/* Margem: embarcadora × contrato do motorista */}
+                            <div className="fuel-modo-row" style={{ margin:'12px 0 6px' }}>
+                              <span className="field-label" style={{ marginBottom:0 }}>Contrato do motorista</span>
+                              <div className="fuel-modo-pills">
+                                <button
+                                  className={`tax-pill${contratoModo === 'piso' ? ' active' : ''}`}
+                                  onClick={() => setContratoModo('piso')}
+                                >Piso ANTT</button>
+                                <button
+                                  className={`tax-pill${contratoModo === 'manual' ? ' active' : ''}`}
+                                  onClick={() => setContratoModo('manual')}
+                                >Valor manual</button>
+                              </div>
+                            </div>
+                            {contratoModo === 'manual' && (
+                              <div className="embarcadora-inp-row">
+                                <span className="embarcadora-prefix">R$</span>
+                                <input
+                                  className="embarcadora-inp"
+                                  type="number" min={0} step={0.01}
+                                  value={contratoManual}
+                                  onChange={e => setContratoManual(e.target.value)}
+                                  placeholder="0,00"
+                                />
+                                <span className="embarcadora-prefix" style={{ color:'var(--text3)', fontWeight:400 }}>contrato</span>
+                              </div>
+                            )}
+                            {contratoAbaixoPiso && (
+                              <div className="emb-warn-bar">
+                                <Icon name="alerta" size={12} style={{ flexShrink:0, verticalAlign:'-2px' }} /> Contrato ({fmtBRL(contratoManualNum)}) abaixo do piso ANTT ({fmtBRL(piso)}) — vedado por lei
+                              </div>
+                            )}
+                            {margemBruta != null && (
+                              <div className="emb-cotacao">
+                                <div className="emb-row">
+                                  <span className="emb-row-lbl">Contrato do motorista{contratoModo === 'piso' ? ' (piso ANTT)' : ''}</span>
+                                  <span className="emb-row-val">−{fmtBRL(contrato)}</span>
+                                </div>
+                                <div className="emb-row">
+                                  <span className="emb-row-lbl">Margem bruta</span>
+                                  <span className="emb-row-val" style={{ color: margemBruta >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                                    {fmtBRL(margemBruta)} ({fmtNum(margemBruta / emb * 100)}%)
+                                  </span>
+                                </div>
+                                <div className="emb-row">
+                                  <span className="emb-row-lbl">Margem após encargos ({fmtNum(totalTax * 100, 2)}%)</span>
+                                  <span className="emb-row-val" style={{ color: margemLiq >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                                    {fmtBRL(margemLiq)} ({fmtNum(margemLiq / emb * 100)}%)
+                                  </span>
+                                </div>
                               </div>
                             )}
                           </>
