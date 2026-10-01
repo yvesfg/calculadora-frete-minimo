@@ -696,6 +696,7 @@ export default function CalcPage() {
                   </div>
 
                   <div className="margin-tax-config">
+                    <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                     <div className="tax-inp-group">
                       <span>INSS:</span>
                       <input className="margin-inp-small" type="number" min={0} max={100} step={0.1} value={inss} onChange={e => setInss(parseFloat(e.target.value)||0)} />
@@ -705,6 +706,7 @@ export default function CalcPage() {
                       <span>ICMS:</span>
                       <input className="margin-inp-small" type="number" min={0} max={99} step={0.5} value={icmsAliq} onChange={e => setIcmsAliq(e.target.value)} />
                       <span>%</span>
+                    </div>
                     </div>
                     <div style={{ display:'flex', flexWrap:'wrap', gap:4, flex:1, justifyContent:'flex-end' }}>
                       {Object.entries(TAX_PROFILES).map(([k, v]) => (
