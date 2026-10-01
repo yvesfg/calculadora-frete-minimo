@@ -21,6 +21,13 @@ const DEFAULT_TAX  = 'lr_pf';
 const DEFAULT_MARGIN = 8;
 
 const num = v => parseFloat(String(v).replace(',', '.')) || 0;
+// Input numérico com estado numérico: se o valor não muda (20 → "020"), o React
+// não reescreve o campo e o zero à esquerda fica na tela. Limpa direto no DOM.
+const numInput = e => {
+  const el = e.target;
+  if (/^0\d/.test(el.value)) el.value = el.value.replace(/^0+(?=\d)/, '');
+  return parseFloat(el.value) || 0;
+};
 
 // 2026-07-25 → 25/07
 const diaMes = iso => {
@@ -689,7 +696,7 @@ export default function CalcPage() {
                         className="margin-target-inp"
                         type="number" min={0} max={100}
                         value={margin}
-                        onChange={e => setMargin(parseFloat(e.target.value) || 0)}
+                        onChange={e => setMargin(numInput(e))}
                       />
                       <span className="margin-inp-label">%</span>
                     </div>
@@ -699,12 +706,12 @@ export default function CalcPage() {
                     <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                     <div className="tax-inp-group">
                       <span>INSS:</span>
-                      <input className="margin-inp-small" type="number" min={0} max={100} step={0.1} value={inss} onChange={e => setInss(parseFloat(e.target.value)||0)} />
+                      <input className="margin-inp-small" type="number" min={0} max={100} step={0.1} value={inss} onChange={e => setInss(numInput(e))} />
                       <span>%</span>
                     </div>
                     <div className="tax-inp-group" title="Alíquota de ICMS do frete (por dentro) — a mesma usada no Preço da Embarcadora">
                       <span>ICMS:</span>
-                      <input className="margin-inp-small" type="number" min={0} max={99} step={0.5} value={icmsAliq} onChange={e => setIcmsAliq(e.target.value)} />
+                      <input className="margin-inp-small" type="number" min={0} max={99} step={0.5} value={icmsAliq} onChange={e => setIcmsAliq(e.target.value.replace(/^0+(?=\d)/, ''))} />
                       <span>%</span>
                     </div>
                     </div>
