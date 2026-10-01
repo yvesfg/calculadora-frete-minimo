@@ -701,6 +701,11 @@ export default function CalcPage() {
                       <input className="margin-inp-small" type="number" min={0} max={100} step={0.1} value={inss} onChange={e => setInss(parseFloat(e.target.value)||0)} />
                       <span>%</span>
                     </div>
+                    <div className="tax-inp-group" title="Alíquota de ICMS do frete (por dentro) — a mesma usada no Preço da Embarcadora">
+                      <span>ICMS:</span>
+                      <input className="margin-inp-small" type="number" min={0} max={99} step={0.5} value={icmsAliq} onChange={e => setIcmsAliq(e.target.value)} />
+                      <span>%</span>
+                    </div>
                     <div style={{ display:'flex', flexWrap:'wrap', gap:4, flex:1, justifyContent:'flex-end' }}>
                       {Object.entries(TAX_PROFILES).map(([k, v]) => (
                         <button key={k} className={`tax-pill${taxProfile===k?' active':''}`} onClick={() => setTax(k)}>
@@ -735,6 +740,7 @@ export default function CalcPage() {
                       extras={extras}
                       extrasLbl={extrasLbl}
                       peso={peso}
+                      icmsAliq={num(icmsAliq)}
                     />
                     <ScenarioCard
                       variant="real"
@@ -749,6 +755,7 @@ export default function CalcPage() {
                       extras={extras}
                       extrasLbl={extrasLbl}
                       peso={peso}
+                      icmsAliq={num(icmsAliq)}
                     />
                   </div>
                 </div>
@@ -1006,7 +1013,9 @@ function ToggleCard({ label, sublabel, value, onChange }) {
   );
 }
 
-function ScenarioCard({ variant, title, subtitle, price, net, basis, totalTax, inss, tp, extras, extrasLbl, peso }) {
+function ScenarioCard({ variant, title, subtitle, price, net, basis, totalTax, inss, tp, extras, extrasLbl, peso, icmsAliq }) {
+  // O preço do cenário é líquido de ICMS; o CTe precisa embutir o ICMS por dentro.
+  const comIcms = aplicarICMS(price, icmsAliq, false);
   // Bruto após imposto, diesel e seguro — os demais custos (pneu, manutenção,
   // motorista) já estão modelados dentro do piso, então não entram aqui.
   const posDiesel = price && extras ? price * (1 - totalTax) - extras : null;
@@ -1024,6 +1033,28 @@ function ScenarioCard({ variant, title, subtitle, price, net, basis, totalTax, i
           {porTon(price) && <span className="margin-per-ton">{porTon(price)}</span>}
         </span>
       </div>
+      {comIcms && (
+        <>
+          <div className="margin-detail-row">
+            <span className="margin-detail-label">Sem ICMS</span>
+            <span className="margin-detail-val" style={{ display:'flex', flexDirection:'column', alignItems:'flex-end' }}>
+              {fmtBRL(comIcms.liquido)}
+              {porTon(comIcms.liquido) && <span className="margin-per-ton">{porTon(comIcms.liquido)}</span>}
+            </span>
+          </div>
+          <div className="margin-detail-row">
+            <span className="margin-detail-label">Com ICMS {fmtNum(icmsAliq || 0, icmsAliq % 1 ? 1 : 0)}%</span>
+            <span className="margin-detail-val" style={{ color:'var(--accent)', display:'flex', flexDirection:'column', alignItems:'flex-end' }}>
+              {fmtBRL(comIcms.bruto)}
+              {porTon(comIcms.bruto) && <span className="margin-per-ton">{porTon(comIcms.bruto)}</span>}
+            </span>
+          </div>
+          <div className="margin-detail-row">
+            <span className="margin-detail-label">ICMS embutido</span>
+            <span className="margin-detail-val" style={{ color:'var(--text3)' }}>{fmtBRL(comIcms.icms)}</span>
+          </div>
+        </>
+      )}
       <div className="margin-detail-row">
         <span className="margin-detail-label">PIS</span>
         <span className="margin-detail-val">{fmtNum((tp?.pis || 0) * 100, 4)}%</span>
