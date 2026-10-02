@@ -43,6 +43,18 @@ export const storeSupabase = {
   },
 };
 
+/* Preço do diesel da ANP (tabela frete_diesel_anp) — mesma regra: todos leem,
+   só admin da calculadora grava (RPC diesel_anp_aplicar). */
+export const dieselStore = {
+  async ler() {
+    const r = await rest('GET', 'frete_diesel_anp?id=eq.ativa&select=payload', null, false);
+    return r?.[0]?.payload || null;
+  },
+  async salvar(payload) {
+    await rest('POST', 'rpc/diesel_anp_aplicar', { p_payload: payload });
+  },
+};
+
 /** Usuário atual é admin da calculadora? (só para exibir os botões; o banco é quem garante). */
 export async function souAdminCalc() {
   try { return (await rest('POST', 'rpc/is_calc_admin', {})) === true; } catch { return false; }

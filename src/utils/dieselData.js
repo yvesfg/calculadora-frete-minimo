@@ -7,8 +7,10 @@
      1. TABELA EMBUTIDA (DIESEL_UF_BASE) — foto do levantamento
         semanal da ANP, funciona offline e no `vite dev`.
      2. ANP AO VIVO — o botão "Atualizar" chama /api/diesel-anp,
-        que lê a planilha semanal da ANP server-side. O resultado
-        fica em localStorage e passa a valer sobre a tabela.
+        que lê a planilha semanal da ANP server-side. Só admin da
+        calculadora atualiza; o resultado vai para o Supabase
+        (frete_diesel_anp) e vale para todos. O localStorage é só
+        cache para o 1º render.
 
    Para atualizar a camada 1 na mão: rode /api/diesel-anp no deploy,
    cole os valores em DIESEL_UF_BASE e ajuste DIESEL_SOURCE.semana*.
@@ -16,6 +18,8 @@
    Fonte: ANP — Série Histórica do Levantamento de Preços,
    arquivo semanal por estado.
 */
+
+import { dieselStore } from './anttStore.js';
 
 export const DIESEL_SOURCE = {
   fonte: 'ANP · Levantamento de Preços',
@@ -113,7 +117,20 @@ export async function buscarPrecosANP() {
   const j = await r.json().catch(() => null);
   if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
   if (!j) throw new Error('resposta ilegível');
+  if (!valido(j)) throw new Error('resposta da ANP em formato inesperado');
+  // Grava no Supabase antes de aplicar: o preço vale para todos os usuários,
+  // e o banco só aceita de admin da calculadora.
+  await dieselStore.salvar(j);
   return aplicarPrecosANP(j);
+}
+
+/** Puxa o preço que o admin publicou. Sem nada no banco, fica o cache/tabela. */
+export async function carregarDieselCompartilhado() {
+  try {
+    const p = await dieselStore.ler();
+    if (valido(p)) return aplicarPrecosANP(p);
+  } catch { /* offline/sem Supabase: segue com o cache */ }
+  return null;
 }
 
 /* ── Consumo médio por composição veicular ────────────────

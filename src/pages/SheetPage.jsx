@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { RAW, IDX, CARGO_LBL, resolveTable, findRow, calcPiso, fmtBRL, fmtNum } from '../utils/anttData.js';
-import { dieselUF, dieselMeta, consumoPreset, calcCombustivel } from '../utils/dieselData.js';
+import { dieselUF, dieselMeta, consumoPreset, calcCombustivel, carregarDieselCompartilhado } from '../utils/dieselData.js';
 import { geocode, calcDistance } from '../utils/geo.js';
 import Icon from '../components/Icon.jsx';
 
@@ -102,6 +102,9 @@ export default function SheetPage() {
   const [kmL, setKmL] = useState('');
   const [precoModo, setPrecoModo]     = useState('regiao');
   const [precoManual, setPrecoManual] = useState('');
+  // Preço do diesel publicado pelo admin: re-renderiza quando chega do banco.
+  const [, setDieselVer] = useState(0);
+  useEffect(() => { carregarDieselCompartilhado().then(p => { if (p) setDieselVer(v => v + 1); }); }, []);
   const textRef = useRef(null);
   const fileRef = useRef(null);
 

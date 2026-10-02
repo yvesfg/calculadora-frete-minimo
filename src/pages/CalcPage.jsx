@@ -5,9 +5,10 @@ import {
 } from '../utils/anttData.js';
 import {
   ANTT_DIESEL_BASE, CONSUMO_VAZIO_FATOR, DIESEL_UF_BASE,
-  dieselUF, dieselMeta, buscarPrecosANP, consumoPreset,
+  dieselUF, dieselMeta, buscarPrecosANP, carregarDieselCompartilhado, consumoPreset,
   calcCombustivel, calcPisoCorrigido,
 } from '../utils/dieselData.js';
+import { souAdminCalc } from '../utils/anttStore.js';
 import {
   SEGURO_TAXA_PADRAO, ICMS_PRESETS, ICMS_PADRAO, calcSeguro, aplicarICMS,
 } from '../utils/comercialData.js';
@@ -99,6 +100,13 @@ export default function CalcPage() {
   const [precoManual, setPrecoManual] = useState(() => localStorage.getItem(LS.preco) || '');
   const [dieselInfo, setDieselInfo]   = useState(() => dieselMeta());
   const [anp, setAnp] = useState(null); // { type:'load'|'ok'|'err', msg }
+  const [admin, setAdmin] = useState(false); // só admin publica o diesel (o banco garante)
+
+  // Preço do diesel publicado pelo admin vale para todos: busca ao abrir.
+  useEffect(() => {
+    carregarDieselCompartilhado().then(p => { if (p) setDieselInfo(dieselMeta()); });
+    souAdminCalc().then(setAdmin);
+  }, []);
 
   const tbl  = resolveTable(hp, fc);
   const km   = parseFloat(String(distKm).replace(',', '.')) || 0;
@@ -196,7 +204,7 @@ export default function CalcPage() {
       await buscarPrecosANP();
       const m = dieselMeta();
       setDieselInfo(m);
-      setAnp({ type: 'ok', msg: `ANP · semana de ${diaMes(m.semanaInicio)} a ${diaMes(m.semanaFim)}` });
+      setAnp({ type: 'ok', msg: `ANP · semana de ${diaMes(m.semanaInicio)} a ${diaMes(m.semanaFim)} · publicado para todos` });
     } catch (e) {
       setAnp({ type: 'err', msg: 'ANP: ' + e.message });
     }
@@ -500,7 +508,7 @@ export default function CalcPage() {
                 )}
               </div>
 
-              {precoModo === 'regiao' && (
+              {precoModo === 'regiao' && admin && (
                 <div className="fuel-anp-row">
                   <button className="fuel-anp-btn" onClick={atualizarANP} disabled={anp?.type === 'load'}>
                     {anp?.type === 'load' ? 'Consultando…' : 'Atualizar pela ANP'}
@@ -1083,6 +1091,7 @@ function ScenarioCard({ variant, title, subtitle, price, net, basis, totalTax, i
       </div>
       <div className="margin-detail-row" style={{ borderBottom:'none' }}>
         <span className="margin-detail-label">Total enc.</span>
+        <span className="margin-detail-brl">{price ? fmtBRL(price * totalTax) : '—'}</span>
         <span className="margin-detail-val">{fmtNum(totalTax * 100, 2)}%</span>
       </div>
       <div className="margin-net-row">
