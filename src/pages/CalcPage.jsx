@@ -134,7 +134,8 @@ export default function CalcPage() {
   // Scenario 2: real margin (gross)
   const price2 = costBasis ? costBasis / (1 - totalTax - margin / 100) : null;
 
-  const net1 = price1 && costBasis ? price1 - costBasis : null;
+  // Líquido = recebido − PIS/COFINS/INSS − custeio (nos dois cenários)
+  const net1 = price1 && costBasis ? price1 * (1 - totalTax) - costBasis : null;
   const net2 = price2 && costBasis ? price2 * (1 - totalTax) - costBasis : null;
 
   // ── Seguro da carga ────────────────────────────────────────
@@ -709,6 +710,7 @@ export default function CalcPage() {
                       <input className="margin-inp-small" type="number" min={0} max={100} step={0.1} value={inss} onChange={e => setInss(numInput(e))} />
                       <span>%</span>
                     </div>
+                    <span className="tax-inp-hint">patronal</span>
                     <div className="tax-inp-group" title="Alíquota de ICMS do frete (por dentro) — a mesma usada no Preço da Embarcadora">
                       <span>ICMS:</span>
                       <input className="margin-inp-small" type="number" min={0} max={99} step={0.5} value={icmsAliq} onChange={e => setIcmsAliq(e.target.value.replace(/^0+(?=\d)/, ''))} />
@@ -1066,10 +1068,12 @@ function ScenarioCard({ variant, title, subtitle, price, net, basis, totalTax, i
       )}
       <div className="margin-detail-row">
         <span className="margin-detail-label">PIS</span>
+        <span className="margin-detail-brl">{price ? fmtBRL(price * (tp?.pis || 0)) : '—'}</span>
         <span className="margin-detail-val">{fmtNum((tp?.pis || 0) * 100, 4)}%</span>
       </div>
       <div className="margin-detail-row">
         <span className="margin-detail-label">COFINS</span>
+        <span className="margin-detail-brl">{price ? fmtBRL(price * (tp?.cofins || 0)) : '—'}</span>
         <span className="margin-detail-val">{fmtNum((tp?.cofins || 0) * 100, 4)}%</span>
       </div>
       <div className="margin-detail-row">
