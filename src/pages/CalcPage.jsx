@@ -1078,6 +1078,7 @@ function ScenarioCard({ variant, title, subtitle, price, net, basis, totalTax, i
       </div>
       <div className="margin-detail-row">
         <span className="margin-detail-label">INSS</span>
+        <span className="margin-detail-brl">{price ? fmtBRL(price * inss / 100) : '—'}</span>
         <span className="margin-detail-val">{fmtNum(inss, 1)}%</span>
       </div>
       <div className="margin-detail-row" style={{ borderBottom:'none' }}>
