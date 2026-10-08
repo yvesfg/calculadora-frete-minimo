@@ -196,15 +196,6 @@ export const ANTT_SOURCE = {
   cursor:    { res: 6084, resAno: 2026, por: 17, porAno: 2026 },
 };
 
-export const TAX_PROFILES = {
-  lr_pf:   { label:'LR PF',    pis:0.012375, cofins:0.057  },
-  lr_pj_sn:{ label:'LR PJ SN', pis:0.012375, cofins:0.057  },
-  lr_pj_lr:{ label:'LR PJ LR', pis:0.0165,   cofins:0.076  },
-  sn_mei:  { label:'SN MEI',   pis:0,         cofins:0      },
-  sn_anexo:{ label:'SN Anexo', pis:0,         cofins:0      },
-  sn_nfse: { label:'SN NFSe',  pis:0,         cofins:0      },
-};
-
 export function resolveTable(hp, fc) {
   if (hp && fc)  return 'C';
   if (hp && !fc) return 'D';

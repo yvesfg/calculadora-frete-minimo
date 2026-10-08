@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  RAW, IDX, CARGO_LBL, CARGO_SECS, TBL_AXLES, TAX_PROFILES, ANTT_SOURCE,
+  RAW, IDX, CARGO_LBL, CARGO_SECS, TBL_AXLES, ANTT_SOURCE,
   resolveTable, findRow, calcPiso, fmtBRL, fmtNum,
 } from '../utils/anttData.js';
+import { TAX_PROFILES, calcEncargos, precoMargemReal } from '../utils/encargos.js';
 import {
   ANTT_DIESEL_BASE, CONSUMO_VAZIO_FATOR, DIESEL_UF_BASE,
   dieselUF, dieselMeta, buscarPrecosANP, carregarDieselCompartilhado, consumoPreset,
@@ -129,8 +130,9 @@ export default function CalcPage() {
   const peso = parseFloat(String(pesoTon).replace(',', '.')) || 0;
   const pisoPorTon = piso && peso > 0 ? piso / peso : null;
 
+  // Encargos (utils/encargos.js): PIS/COFINS débito s/ preço − crédito s/ contrato + INSS s/ contrato.
   const tp   = TAX_PROFILES[taxProfile];
-  const totalTax = (tp?.pis || 0) + (tp?.cofins || 0) + inss / 100;
+  const enc  = (preco, contr) => calcEncargos(tp, preco, contr, inss);
 
   // Base de custeio p/ simulação de margem: opcionalmente considera o retorno vazio
   // (o transportador precisa cobrir o custo do trecho de volta sem carga)
@@ -140,11 +142,13 @@ export default function CalcPage() {
   // Scenario 1: markup over piso
   const price1 = costBasis ? costBasis * (1 + margin / 100) : null;
   // Scenario 2: real margin (gross)
-  const price2 = costBasis ? costBasis / (1 - totalTax - margin / 100) : null;
+  const price2 = costBasis ? precoMargemReal(tp, costBasis, margin / 100, inss) : null;
 
-  // Líquido = recebido − PIS/COFINS/INSS − custeio (nos dois cenários)
-  const net1 = price1 && costBasis ? price1 * (1 - totalTax) - costBasis : null;
-  const net2 = price2 && costBasis ? price2 * (1 - totalTax) - costBasis : null;
+  // Líquido = recebido − encargos − custeio (nos dois cenários)
+  const enc1 = price1 && costBasis ? enc(price1, costBasis) : null;
+  const enc2 = price2 && costBasis ? enc(price2, costBasis) : null;
+  const net1 = enc1 ? price1 - enc1.total - costBasis : null;
+  const net2 = enc2 ? price2 - enc2.total - costBasis : null;
 
   // ── Seguro da carga ────────────────────────────────────────
   // Custo de fora do piso: % sobre o valor da NF transportada.
@@ -173,7 +177,8 @@ export default function CalcPage() {
   const contratoManualNum = num(contratoManual);
   const contrato = contratoModo === 'manual' ? contratoManualNum : (piso || 0);
   const margemBruta = emb > 0 && contrato > 0 ? emb - contrato : null;
-  const margemLiq   = emb > 0 && contrato > 0 ? emb * (1 - totalTax) - contrato : null;
+  const encEmb      = emb > 0 && contrato > 0 ? enc(emb, contrato) : null;
+  const margemLiq   = encEmb ? emb - encEmb.total - contrato : null;
   const contratoAbaixoPiso = contratoModo === 'manual' && contratoManualNum > 0 && piso && contratoManualNum < piso;
 
   // ── Combustível ────────────────────────────────────────────
@@ -718,7 +723,7 @@ export default function CalcPage() {
                       <input className="margin-inp-small" type="number" min={0} max={100} step={0.1} value={inss} onChange={e => setInss(numInput(e))} />
                       <span>%</span>
                     </div>
-                    <span className="tax-inp-hint">patronal</span>
+                    <span className="tax-inp-hint">patronal s/ contrato PF</span>
                     <div className="tax-inp-group" title="Alíquota de ICMS do frete (por dentro) — a mesma usada no Preço da Embarcadora">
                       <span>ICMS:</span>
                       <input className="margin-inp-small" type="number" min={0} max={99} step={0.5} value={icmsAliq} onChange={e => setIcmsAliq(e.target.value.replace(/^0+(?=\d)/, ''))} />
@@ -727,7 +732,7 @@ export default function CalcPage() {
                     </div>
                     <div style={{ display:'flex', flexWrap:'wrap', gap:4, flex:1, justifyContent:'flex-end' }}>
                       {Object.entries(TAX_PROFILES).map(([k, v]) => (
-                        <button key={k} className={`tax-pill${taxProfile===k?' active':''}`} onClick={() => setTax(k)}>
+                        <button key={k} title={v.hint} className={`tax-pill${taxProfile===k?' active':''}`} onClick={() => setTax(k)}>
                           {v.label}
                         </button>
                       ))}
@@ -753,7 +758,7 @@ export default function CalcPage() {
                       price={price1}
                       net={net1}
                       basis={costBasis}
-                      totalTax={totalTax}
+                      enc={enc1}
                       inss={inss}
                       tp={tp}
                       extras={extras}
@@ -764,11 +769,11 @@ export default function CalcPage() {
                     <ScenarioCard
                       variant="real"
                       title="Margem Real"
-                      subtitle={`${retornoVazio ? 'Custeio (ida+volta)' : 'Piso'} ÷ (1 − imp − ${margin}%)`}
+                      subtitle={`líquido = ${margin}% do preço`}
                       price={price2}
                       net={net2}
                       basis={costBasis}
-                      totalTax={totalTax}
+                      enc={enc2}
                       inss={inss}
                       tp={tp}
                       extras={extras}
@@ -992,7 +997,7 @@ export default function CalcPage() {
                                   </span>
                                 </div>
                                 <div className="emb-row">
-                                  <span className="emb-row-lbl">Margem após encargos ({fmtNum(totalTax * 100, 2)}%)</span>
+                                  <span className="emb-row-lbl" title="PIS/COFINS (débito − crédito s/ contrato) + INSS patronal s/ contrato PF">Margem após encargos (−{fmtBRL(encEmb?.total)})</span>
                                   <span className="emb-row-val" style={{ color: margemLiq >= 0 ? 'var(--green)' : 'var(--red)' }}>
                                     {fmtBRL(margemLiq)} ({fmtNum(margemLiq / emb * 100)}%)
                                   </span>
@@ -1032,12 +1037,12 @@ function ToggleCard({ label, sublabel, value, onChange }) {
   );
 }
 
-function ScenarioCard({ variant, title, subtitle, price, net, basis, totalTax, inss, tp, extras, extrasLbl, peso, icmsAliq }) {
+function ScenarioCard({ variant, title, subtitle, price, net, basis, enc, inss, tp, extras, extrasLbl, peso, icmsAliq }) {
   // O preço do cenário é líquido de ICMS; o CTe precisa embutir o ICMS por dentro.
   const comIcms = aplicarICMS(price, icmsAliq, false);
   // Bruto após imposto, diesel e seguro — os demais custos (pneu, manutenção,
   // motorista) já estão modelados dentro do piso, então não entram aqui.
-  const posDiesel = price && extras ? price * (1 - totalTax) - extras : null;
+  const posDiesel = price && extras && enc ? price - enc.total - extras : null;
   // Valor por tonelada: só faz sentido com o peso da carga informado.
   const porTon = v => (peso > 0 && v != null ? `R$ ${fmtNum(v / peso, 2)}/ton` : null);
   return (
@@ -1074,25 +1079,35 @@ function ScenarioCard({ variant, title, subtitle, price, net, basis, totalTax, i
           </div>
         </>
       )}
+      {/* Débito s/ preço; crédito e INSS s/ contrato (o % à direita é a alíquota sobre a base de cada linha). */}
       <div className="margin-detail-row">
-        <span className="margin-detail-label">PIS</span>
-        <span className="margin-detail-brl">{price ? fmtBRL(price * (tp?.pis || 0)) : '—'}</span>
-        <span className="margin-detail-val">{fmtNum((tp?.pis || 0) * 100, 4)}%</span>
+        <span className="margin-detail-label">PIS s/ preço</span>
+        <span className="margin-detail-brl">{enc ? fmtBRL(enc.pis) : '—'}</span>
+        <span className="margin-detail-val">{fmtNum((tp?.pis || 0) * 100, 2)}%</span>
       </div>
       <div className="margin-detail-row">
-        <span className="margin-detail-label">COFINS</span>
-        <span className="margin-detail-brl">{price ? fmtBRL(price * (tp?.cofins || 0)) : '—'}</span>
-        <span className="margin-detail-val">{fmtNum((tp?.cofins || 0) * 100, 4)}%</span>
+        <span className="margin-detail-label">COFINS s/ preço</span>
+        <span className="margin-detail-brl">{enc ? fmtBRL(enc.cofins) : '—'}</span>
+        <span className="margin-detail-val">{fmtNum((tp?.cofins || 0) * 100, 2)}%</span>
       </div>
-      <div className="margin-detail-row">
-        <span className="margin-detail-label">INSS</span>
-        <span className="margin-detail-brl">{price ? fmtBRL(price * inss / 100) : '—'}</span>
-        <span className="margin-detail-val">{fmtNum(inss, 1)}%</span>
-      </div>
+      {(tp?.credito || 0) > 0 && (
+        <div className="margin-detail-row">
+          <span className="margin-detail-label">Crédito s/ contrato</span>
+          <span className="margin-detail-brl" style={{ color:'var(--green)' }}>{enc ? `−${fmtBRL(enc.credito)}` : '—'}</span>
+          <span className="margin-detail-val">{fmtNum(tp.credito * 100, 4)}%</span>
+        </div>
+      )}
+      {tp?.inss && (
+        <div className="margin-detail-row">
+          <span className="margin-detail-label">INSS s/ contrato</span>
+          <span className="margin-detail-brl">{enc ? fmtBRL(enc.inss) : '—'}</span>
+          <span className="margin-detail-val">{fmtNum(inss, 1)}%</span>
+        </div>
+      )}
       <div className="margin-detail-row" style={{ borderBottom:'none' }}>
         <span className="margin-detail-label">Total enc.</span>
-        <span className="margin-detail-brl">{price ? fmtBRL(price * totalTax) : '—'}</span>
-        <span className="margin-detail-val">{fmtNum(totalTax * 100, 2)}%</span>
+        <span className="margin-detail-brl">{enc ? fmtBRL(enc.total) : '—'}</span>
+        <span className="margin-detail-val">{enc ? `${fmtNum(enc.pctPreco * 100, 2)}% do preço` : '—'}</span>
       </div>
       <div className="margin-net-row">
         <span className="margin-net-label">Líquido</span>
