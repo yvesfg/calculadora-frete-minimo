@@ -757,7 +757,6 @@ export default function CalcPage() {
                       subtitle={`${retornoVazio ? 'Custeio (ida+volta)' : 'Piso'} × (1 + ${margin}%)`}
                       price={price1}
                       net={net1}
-                      basis={costBasis}
                       enc={enc1}
                       inss={inss}
                       tp={tp}
@@ -772,7 +771,6 @@ export default function CalcPage() {
                       subtitle={`líquido = ${margin}% do preço`}
                       price={price2}
                       net={net2}
-                      basis={costBasis}
                       enc={enc2}
                       inss={inss}
                       tp={tp}
@@ -1037,7 +1035,7 @@ function ToggleCard({ label, sublabel, value, onChange }) {
   );
 }
 
-function ScenarioCard({ variant, title, subtitle, price, net, basis, enc, inss, tp, extras, extrasLbl, peso, icmsAliq }) {
+function ScenarioCard({ variant, title, subtitle, price, net, enc, inss, tp, extras, extrasLbl, peso, icmsAliq }) {
   // O preço do cenário é líquido de ICMS; o CTe precisa embutir o ICMS por dentro.
   const comIcms = aplicarICMS(price, icmsAliq, false);
   // Bruto após imposto, diesel e seguro — os demais custos (pneu, manutenção,
@@ -1114,9 +1112,10 @@ function ScenarioCard({ variant, title, subtitle, price, net, basis, enc, inss, 
         <span className="margin-net-val" style={{ color: net >= 0 ? 'var(--green)' : 'var(--red)' }}>
           <span>
             {fmtBRL(net)}
-            {basis && net != null ? (
+            {/* % sobre o PREÇO — mesma base do cenário "Margem Real" (líquido = X% do preço). */}
+            {price && net != null ? (
               <span className="margin-net-pct" style={{ color:'var(--text3)' }}>
-                ({fmtNum(net / basis * 100)}%)
+                ({fmtNum(net / price * 100)}% do preço)
               </span>
             ) : null}
           </span>
