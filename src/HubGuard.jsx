@@ -10,6 +10,14 @@ function isValidJwt(token) {
   } catch { return false; }
 }
 
+// Cabeçalho para /api/ai-extract, que só atende quem entrou pelo Hub (api/_auth.js).
+export function hubAuth() {
+  try {
+    const t = sessionStorage.getItem(SESS_KEY);
+    return t ? { Authorization: `Bearer ${t}` } : {};
+  } catch { return {}; }
+}
+
 export function useHubAuth() {
   const [ok, setOk] = useState(null); // null=loading, true=authed, false=denied
 

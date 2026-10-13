@@ -3,6 +3,7 @@ import { RAW, IDX, CARGO_LBL, resolveTable, findRow, calcPiso, fmtBRL, fmtNum } 
 import { dieselUF, dieselMeta, consumoPreset, calcCombustivel, carregarDieselCompartilhado } from '../utils/dieselData.js';
 import { geocode, calcDistance } from '../utils/geo.js';
 import Icon from '../components/Icon.jsx';
+import { hubAuth } from '../HubGuard.jsx';
 
 const DEFAULT_AXLES   = 5;
 const DEFAULT_CARGO   = 'carga_geral';
@@ -173,7 +174,7 @@ export default function SheetPage() {
       const image = isPdf ? dataUrl : await downscaleImage(dataUrl);
       const r = await fetch('/api/ai-extract', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...hubAuth() },
         body: JSON.stringify({ profile: 'cotacao', image }),
       });
       if (!r.ok) {

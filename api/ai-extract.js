@@ -8,6 +8,8 @@
 //    AI_GATEWAY_TOKEN  deve bater com o AI_GATEWAY_TOKEN do gateway
 // ─────────────────────────────────────────────────────────
 
+import { exigirLogin } from "./_auth.js";
+
 export const config = { api: { bodyParser: { sizeLimit: "8mb" } } };
 
 export default async function handler(req, res) {
@@ -15,6 +17,7 @@ export default async function handler(req, res) {
     res.status(405).json({ error: "Método não permitido" });
     return;
   }
+  if (!(await exigirLogin(req, res))) return; // só quem entrou pelo Hub gasta IA (api/_auth.js)
   const url = process.env.AI_GATEWAY_URL || "https://yf-ai-gateway.vercel.app/api/extract";
   const token = process.env.AI_GATEWAY_TOKEN || "";
   try {
