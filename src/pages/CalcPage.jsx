@@ -45,6 +45,19 @@ const LS = {
   icms:  'calc_icms_aliq',
   rota:  'calc_rota_modo',
   ufKm:  'calc_km_uf',
+  ped:   'calc_pedagio_trechos', // { "UF|Cidade>UF|Cidade|eixos": "123,45" }
+};
+
+// Pedágio digitado à mão, lembrado por origem × destino × eixos (a tarifa é por eixo).
+const lerPedagios = () => {
+  try { return JSON.parse(localStorage.getItem(LS.ped) || '{}') || {}; } catch { return {}; }
+};
+const gravarPedagio = (chave, valor) => {
+  try {
+    const m = lerPedagios();
+    if (valor) m[chave] = valor; else delete m[chave];
+    localStorage.setItem(LS.ped, JSON.stringify(m));
+  } catch { /* sem storage: vale só nesta tela */ }
 };
 
 const UFS = Object.keys(DIESEL_UF_BASE).sort();
@@ -157,6 +170,22 @@ export default function CalcPage() {
   const seguro = seg?.custo || 0;
   const seguroPct = seguro && costBasis ? seguro / costBasis : null;
 
+  // ── Pedágio ────────────────────────────────────────────────
+  // Fora do piso (vale-pedágio, Lei 10.209/2001). Valor manual; no modo rota fica
+  // lembrado por trecho + eixos e volta sozinho na próxima cotação do mesmo trecho.
+  const chavePedagio = !soKm && orig.uf && orig.city && dest.uf && dest.city
+    ? `${orig.uf}|${orig.city}>${dest.uf}|${dest.city}|${axles}` : null;
+  const [pedagioTxt, setPedagioTxt] = useState('');
+  useEffect(() => {
+    if (chavePedagio) setPedagioTxt(lerPedagios()[chavePedagio] || '');
+  }, [chavePedagio]);
+  const mudarPedagio = (v) => {
+    setPedagioTxt(v);
+    if (chavePedagio) gravarPedagio(chavePedagio, v.trim());
+  };
+  const pedagio = num(pedagioTxt);
+  const pedagioPct = pedagio && costBasis ? pedagio / costBasis : null;
+
   // ── Cotação da embarcadora ─────────────────────────────────
   // Aceita o valor cheio do trecho ou R$/tonelada, com ou sem ICMS embutido.
   // `emb` continua sendo a base de comparação = o que fica com o transportador
@@ -223,9 +252,12 @@ export default function CalcPage() {
   const pisoCorrDelta = pisoCorr && piso ? pisoCorr - piso : null;
   const mostraPisoCorr = pisoCorr && piso && Math.abs(pisoCorrDelta / piso) > 0.005;
 
-  // Custos diretos que não estão no piso: diesel + seguro da carga
-  const extras = (comb?.custo || 0) + seguro;
-  const extrasLbl = comb && seguro ? 'diesel e seguro' : seguro ? 'seguro' : 'diesel';
+  // Custos diretos que não estão no piso: diesel + seguro da carga + pedágio
+  const extras = (comb?.custo || 0) + seguro + pedagio;
+  const extrasPartes = [comb && 'diesel', seguro && 'seguro', pedagio && 'pedágio'].filter(Boolean);
+  const extrasLbl = extrasPartes.length > 1
+    ? `${extrasPartes.slice(0, -1).join(', ')} e ${extrasPartes.at(-1)}`
+    : extrasPartes[0] || 'diesel';
 
   // Cotação da embarcadora que não sobra nem para o custo fixo de carga/descarga
   const embSobra = emb > 0 && extras > 0 ? emb - extras : null;
@@ -442,6 +474,25 @@ export default function CalcPage() {
                     ? <span className="fuel-tag" style={{ color:'var(--yellow)' }}>= {fmtBRL(seguro)}</span>
                     : <span className="fuel-tag">padrão {fmtNum(SEGURO_TAXA_PADRAO, 3)}%</span>}
                 </div>
+              </div>
+
+              {/* Pedágio — valor manual, lembrado por trecho + eixos */}
+              <div style={{ marginTop:10 }}>
+                <label className="field-label">Pedágio (opcional)</label>
+                <div className="dist-badge" style={{ marginTop:0 }}>
+                  <Icon name="estrada" stroke="var(--text3)" size={13} />
+                  <span style={{ fontSize:11, color:'var(--text2)', fontWeight:700 }}>R$</span>
+                  <input
+                    value={pedagioTxt}
+                    onChange={e => mudarPedagio(e.target.value)}
+                    style={{ flex:1, textAlign:'right', fontWeight:700, color:'var(--accent)' }}
+                    placeholder="0,00"
+                  />
+                  <span className="fuel-tag">{chavePedagio ? `lembrado p/ ${axles} eixos` : 'total da viagem'}</span>
+                </div>
+                {retornoVazio && pedagio > 0 && (
+                  <div className="fuel-hint">Com retorno vazio, inclua o pedágio da volta (eixo suspenso não paga).</div>
+                )}
               </div>
             </div>
           </div>
@@ -696,7 +747,10 @@ export default function CalcPage() {
                   Piso = CCD × distância + CC &nbsp;·&nbsp; {ANTT_SOURCE.resolucao}
                 </div>
                 <div className="result-note" style={{ paddingTop:0 }}>
-                  <Icon name="estrada" size={13} style={{ flexShrink:0, verticalAlign:'-2px' }} /> Pedágio não incluso no piso — deve ser pago à parte, conforme legislação.
+                  <Icon name="estrada" size={13} style={{ flexShrink:0, verticalAlign:'-2px' }} />{' '}
+                  {pedagio > 0
+                    ? <>Pedágio {fmtBRL(pedagio)}{pedagioPct != null && ` (${fmtNum(pedagioPct * 100, 1)}% do ${retornoVazio ? 'custeio' : 'piso'})`} — fora do piso, pago à parte (vale-pedágio); já descontado em “Após {extrasLbl}”.</>
+                    : 'Pedágio não incluso no piso — deve ser pago à parte, conforme legislação.'}
                 </div>
 
                 {/* Margin calc */}
