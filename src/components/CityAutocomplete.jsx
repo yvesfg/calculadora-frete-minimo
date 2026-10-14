@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { createPortal } from 'react-dom';
 import { fetchStates, fetchCities } from '../utils/geo.js';
 
 function CityAutocomplete({ label, value, onChange, onCityDone }, ref) {
@@ -12,6 +13,24 @@ function CityAutocomplete({ label, value, onChange, onCityDone }, ref) {
   const ufRef    = useRef(null);
   const inputRef = useRef(null);
   const dropRef  = useRef(null);
+  const [rect, setRect] = useState(null);
+
+  // Lista montada via portal em <body> (mesmo motivo do Dropdown.jsx): os cards têm
+  // overflow:hidden e cortavam as sugestões. Posição acompanha scroll/resize.
+  useEffect(() => {
+    if (!open) return;
+    const reposition = () => {
+      const r = inputRef.current?.getBoundingClientRect();
+      if (r) setRect(r);
+    };
+    reposition();
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    return () => {
+      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
+    };
+  }, [open]);
 
   useImperativeHandle(ref, () => ({
     focusUf: () => ufRef.current?.focus(),
@@ -77,8 +96,12 @@ function CityAutocomplete({ label, value, onChange, onCityDone }, ref) {
             placeholder={uf ? 'Cidade…' : 'Selecione UF primeiro'}
             disabled={!uf}
           />
-          {open && (
-            <div className="ac-dropdown" ref={dropRef}>
+          {open && rect && createPortal(
+            <div
+              className="ac-dropdown"
+              ref={dropRef}
+              style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, width: rect.width }}
+            >
               {suggestions.map((c, i) => (
                 <div
                   key={c.id}
@@ -91,7 +114,8 @@ function CityAutocomplete({ label, value, onChange, onCityDone }, ref) {
                   </div>
                 </div>
               ))}
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       </div>
