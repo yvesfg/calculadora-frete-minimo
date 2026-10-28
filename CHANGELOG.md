@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-28 — Várias entregas na rota + modo claro
+
+**Solicitado:** poder colocar mais de uma entrega no percurso (como as paradas do Google Maps) e modo claro na calculadora, conferindo a legibilidade.
+
+**Implementado:**
+- Rota: "Adicionar entrega" entre a origem e o destino final; cada entrega mostra o km do trecho (Dias d'Ávila → Lauro de Freitas 40 km → Juazeiro 515 km = 556 km). `geo.calcDistance(pontos)` passa todos os pontos ao OSRM (alternativas só com 2 pontos); geocodificação em série e em cache (limite do Nominatim). Pedágio lembrado inclui as entregas na chave.
+- Modo claro: tokens `:root[data-theme="light"]` (paleta terracota do CO/Frota, dourado escurecido para #805808); cores fixas do CSS viraram `color-mix` dos tokens; botão sol/lua na barra de abas (preso à direita no celular), lembrado em `calc_tema`; aberto pelo Hub segue o `?tema=` do CO.
+- Legibilidade: script de contraste WCAG nas 3 abas × 2 temas (inclusive retorno vazio e Preço da Embarcadora abertos) — 0 textos abaixo de 4,5:1. No escuro, `--text2`/`--text3` clareados (texto de 8–10 px dava 4,2:1).
+
 ## 2026-09-30 — Checagem ANTT enxerga Portarias SUROC (reajuste do piso)
 
 **Solicitado:** "Verificar atualização" dizia "a mais recente" com a Portaria SUROC nº 22/2026 (28/09) já publicada.

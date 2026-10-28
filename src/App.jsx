@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { temaInicial, aplicarTema } from './utils/tema.js';
 import { HubGate } from './HubGuard.jsx';
 import Icon from './components/Icon.jsx';
 import CalcPage from './pages/CalcPage.jsx';
@@ -13,6 +14,8 @@ const TABS = [
 
 export default function App() {
   const [page, setPage] = useState('calc');
+  const [tema, setTema] = useState(temaInicial);
+  useEffect(() => { aplicarTema(tema); }, [tema]);
 
   return (
     <HubGate>
@@ -28,6 +31,14 @@ export default function App() {
             {t.label}
           </button>
         ))}
+        <button
+          className="tab-btn tema-btn"
+          onClick={() => setTema(tm => tm === 'light' ? 'dark' : 'light')}
+          title={tema === 'light' ? 'Mudar para o modo escuro' : 'Mudar para o modo claro'}
+          aria-label={tema === 'light' ? 'Mudar para o modo escuro' : 'Mudar para o modo claro'}
+        >
+          <Icon name={tema === 'light' ? 'lua' : 'sol'} size={15} />
+        </button>
       </nav>
       <main style={{ flex:1, overflow:'auto' }}>
         {page === 'calc'  && <CalcPage />}

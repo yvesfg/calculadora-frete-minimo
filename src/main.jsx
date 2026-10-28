@@ -3,7 +3,11 @@ import ReactDOM from 'react-dom/client';
 import { sincronizarBase } from './utils/anttUpdate.js'; // aplica o cache local da base ANTT
 import { storeSupabase } from './utils/anttStore.js';
 import App from './App.jsx';
+import { temaInicial } from './utils/tema.js';
 import './index.css';
+
+// Antes do 1º render: sem isto a tela pisca escura antes de ficar clara.
+document.documentElement.setAttribute('data-theme', temaInicial());
 
 const render = () => ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

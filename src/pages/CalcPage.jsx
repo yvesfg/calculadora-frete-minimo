@@ -65,6 +65,10 @@ const UFS = Object.keys(DIESEL_UF_BASE).sort();
 export default function CalcPage() {
   const [orig, setOrig]   = useState({ uf:'', city:'' });
   const [dest, setDest]   = useState({ uf:'', city:'' });
+  // Entregas no meio do caminho, na ordem (como as paradas do Google Maps).
+  // O id fixo segura o estado de cada CityAutocomplete quando uma sai da lista.
+  const [paradas, setParadas] = useState([]);
+  const novaParadaId = useRef(0);
   const [routes, setRoutes] = useState([]);
   const [routeIdx, setRouteIdx] = useState(0);
   const [distKm, setDistKm]   = useState('');
@@ -173,8 +177,9 @@ export default function CalcPage() {
   // ── Pedágio ────────────────────────────────────────────────
   // Fora do piso (vale-pedágio, Lei 10.209/2001). Valor manual; no modo rota fica
   // lembrado por trecho + eixos e volta sozinho na próxima cotação do mesmo trecho.
-  const chavePedagio = !soKm && orig.uf && orig.city && dest.uf && dest.city
-    ? `${orig.uf}|${orig.city}>${dest.uf}|${dest.city}|${axles}` : null;
+  const paradasOk = paradas.every(p => p.uf && p.city);
+  const chavePedagio = !soKm && orig.uf && orig.city && dest.uf && dest.city && paradasOk
+    ? [orig, ...paradas, dest].map(p => `${p.uf}|${p.city}`).join('>') + `|${axles}` : null;
   const [pedagioTxt, setPedagioTxt] = useState('');
   useEffect(() => {
     if (chavePedagio) setPedagioTxt(lerPedagios()[chavePedagio] || '');
@@ -265,11 +270,13 @@ export default function CalcPage() {
 
   const lookupRoutes = useCallback(async () => {
     if (soKm) return;
-    if (!orig.uf || !orig.city || !dest.uf || !dest.city) return;
+    if (!orig.uf || !orig.city || !dest.uf || !dest.city || !paradasOk) return;
     setGeoLoading(true); setGeoErr('');
     try {
-      const [o, d] = await Promise.all([geocode(orig.city, orig.uf), geocode(dest.city, dest.uf)]);
-      const alts = await calcDistance(o, d);
+      // Em série: o Nominatim recusa rajada de pedidos (limite de 1 por segundo).
+      const pontos = [];
+      for (const p of [orig, ...paradas, dest]) pontos.push(await geocode(p.city, p.uf));
+      const alts = await calcDistance(pontos);
       setRoutes(alts);
       setRouteIdx(0);
       setDistKm(String(alts[0].km));
@@ -278,11 +285,13 @@ export default function CalcPage() {
     } finally {
       setGeoLoading(false);
     }
-  }, [orig, dest, soKm]);
+  }, [orig, dest, paradas, paradasOk, soKm]);
 
   useEffect(() => { lookupRoutes(); }, [lookupRoutes]);
 
   const axleOptions = TBL_AXLES[tbl] || [];
+  // km de cada trecho da rota escolhida (origem → entrega 1 → … → destino).
+  const trechos = paradas.length ? (routes[routeIdx]?.legs ?? []) : [];
 
   return (
     <div className="page-content">
@@ -295,7 +304,7 @@ export default function CalcPage() {
               <div className="card-head-icon"><Icon name="rota" stroke="var(--accent)" size={17} /></div>
               <div style={{ flex:1 }}>
                 <div className="card-head-title">Rota</div>
-                <div className="card-head-sub">{soKm ? 'Distância informada' : 'Origem → Destino'}</div>
+                <div className="card-head-sub">{soKm ? 'Distância informada' : paradas.length ? `Origem → ${paradas.length} entrega${paradas.length > 1 ? 's' : ''} → Destino` : 'Origem → Destino'}</div>
               </div>
               <div className="fuel-modo-pills">
                 <button
@@ -336,13 +345,37 @@ export default function CalcPage() {
                     />
                   </div>
                 </div>
+                {paradas.map((p, i) => (
+                  <div key={p.id} style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:10 }}>
+                    <div className="route-dot stop" />
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <CityAutocomplete
+                        label={<>Entrega {i + 1}{trechos[i] && <span className="route-leg"> · {trechos[i].km.toLocaleString('pt-BR')} km</span>}</>}
+                        value={p}
+                        onChange={v => setParadas(ps => ps.map(x => x.id === p.id ? { ...x, ...v } : x))}
+                      />
+                    </div>
+                    <button className="route-del" title="Tirar esta entrega" aria-label={`Tirar entrega ${i + 1}`}
+                      onClick={() => setParadas(ps => ps.filter(x => x.id !== p.id))}>
+                      <Icon name="x" size={13} />
+                    </button>
+                  </div>
+                ))}
                 <div style={{ display:'flex', alignItems:'flex-start', gap:8 }}>
                   <div className="route-dot dest" />
                   <div style={{ flex:1 }}>
-                    <CityAutocomplete ref={destRef} label="Destino" value={dest} onChange={setDest} />
+                    <CityAutocomplete ref={destRef}
+                      label={<>{paradas.length ? 'Destino final' : 'Destino'}{paradas.length > 0 && trechos[paradas.length] && <span className="route-leg"> · {trechos[paradas.length].km.toLocaleString('pt-BR')} km</span>}</>}
+                      value={dest} onChange={setDest} />
                   </div>
                 </div>
               </div>
+
+              {/* Mais de uma entrega: cada uma entra antes do destino final, na ordem do percurso. */}
+              <button className="btn btn-ghost route-add"
+                onClick={() => setParadas(ps => [...ps, { id: ++novaParadaId.current, uf:'', city:'' }])}>
+                <Icon name="mais" size={13} /> Adicionar entrega
+              </button>
 
               {geoErr && <div className="err-banner"><Icon name="alerta" size={13} style={{ flexShrink:0, verticalAlign:'-2px' }} /> {geoErr}</div>}
 
